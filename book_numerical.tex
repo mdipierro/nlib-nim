@@ -265,1914 +265,612 @@ All the code included in these notes is released by the author under the three-c
 
 Many thanks to Alan Etkins, Brian Fox, Dan Bowker, Ethan Sudman, Holly Monteith, Konstantinos Moutselos, Luca De Alfaro, Michael Gheith, Paula Mikrut, Sean Neilan, and John Plamondon for reviewing different editions of this book. We also thank all the students of our classes for their useful comments and suggestions. Finally, we thank Wikipedia, from which we borrowed a few ideas and examples.
 
-\goodbreak\chapter{Overview of the Python Language}
+\goodbreak\chapter{Overview of the Nim Language}
 
-\index{Python}
+\index{Nim}
 
-\goodbreak\section{About Python}
+\goodbreak\section{About Nim}
 
-Python is a general-purpose high-level programming language.
-Its design philosophy emphasizes programmer productivity and code readability. It has a minimalist core syntax with very few basic commands and simple semantics. It also has a large and comprehensive standard library, including an Application Programming Interface (API) \index{API} to many of the underlying operating system (OS) functions. Python provides built-in objects such as linked lists ({\ft list}), tuples ({\ft tuple}), hash tables ({\ft dict}), arbitrarily long integers ({\ft long}), complex numbers, and arbitrary precision decimal numbers.
+Nim~\cite{nim} is a statically typed compiled systems-programming language with a high-level, Python-like surface syntax. It produces small native binaries by compiling through C, C++, or JavaScript, while its standard library and metaprogramming facilities give it the productivity of a scripting language. Nim has a strong type system, automatic memory management (with optional manual control), generics, first-class procedures, exceptions, threads, channels, and a rich macro system.
 
-Python supports multiple programming paradigms, including object-oriented ({\ft class}), imperative ({\ft def}), and functional ({\ft lambda}) programming. Python has a dynamic type system and automatic memory management using reference counting (similar to Perl, Ruby, and Scheme).
+Three properties of Nim shape the code in this book:
+\begin{itemize}
+\item Indentation defines blocks (as in Python), but every declaration has a type. Type errors are caught at compile time.
+\item Identifiers are partially style-insensitive: after the first character, underscores and case differences are ignored, so {\ft insertion\_sort}, {\ft insertionSort}, and {\ft INSERTIONSORT} refer to the same identifier. The convention used here is {\ft camelCase} for procedures and {\ft PascalCase} for types.
+\item Procedures, methods, iterators, and operators are all separately overloadable. The {\ft *} suffix marks a name as exported from a module.
+\end{itemize}
 
-Python was first released by Guido van Rossum in 1991~\cite{guido}. The language has an open, community-based development model managed by the nonprofit Python Software Foundation. There are many interpreters and compilers that implement the Python language, including one in Java (Jython), one built on .Net (IronPython), and one built in Python itself (PyPy). In this brief review, we refer to the reference C implementation created by Guido.
+Nim is interoperable with other ecosystems: through the {\ft nimpy} package it can call Python (we use it for plots through {\ft matplotlib}), through {\ft db\_sqlite} it talks to SQLite~\cite{sqlite} for persistence, and the C FFI gives it access to libraries such as BLAS or FFTW.
 
-You can find many tutorials, the official documentation, and library references of the language on the official Python website.~\cite{python}
+You can find tutorials, the language manual, and the standard library reference on the official Nim website.
 
-For additional Python references, we can recommend the books in ref.~\cite{guido}  and ref.~\cite{lutz}.
+You may skip this chapter if you are already familiar with the Nim language; the rest of the book uses only the constructs introduced here.
 
-You may skip this chapter if you are already familiar with the Python language.
+\goodbreak\section{Variables, types, and basic operators}
 
-\goodbreak\subsection{Python versus Java and C++ syntax}
+\goodbreak\subsection{{\ft let}, {\ft var}, and {\ft const}}
 
-\index{Java}\index{C++}
-
-\begin{center}
-\begin{tabular}{|l|l|l|l|}
-\hline
-& {\bf Java/C++} & {\bf Python} \\ \hline
-assignment & $a=b;$ & $a=b$ \\ \hline
-comparison & if ($a == b$) & if $a == b$: \\ \hline
-loops & for($a=0;a<n;a++)$ & for $a$ in $range(0, n)$: \\ \hline
-block & Braces \{...\} & indentation \\ \hline
-function & $float f$(float $a$) \{ & def $f(a)$: \\ \hline
-function call & $f(a)$ & $f(a)$ \\ \hline
-arrays/lists & $a[i]$ & $a[i]$ \\ \hline
-member & $a$.member & $a$.member \\ \hline
-nothing & $null$ / $void * $ & $None$ \\ \hline
-\end{tabular}
-\end{center}
-
-As in Java, variables that are primitive types (bool, int, float) are passed by copy, but more complex types, unlike C++, are passed by reference. This means when we pass an object to a function, in Python, we do not make a copy of the object, we simply define an alternate name for referencing the object in the function.
-
-\goodbreak\subsection{help, dir}
-
-\index{help} \index{dir}
-
-The Python language provides two commands to obtain documentation about objects defined in the current scope, whether the object is built in or user defined.
-
-We can ask for {\ft help} about an object, for example, ``1'':
-\begin{lstlisting}
->>> help(1)
-Help on int object:
-
-class int(object)
- |  int(x[, base]) -> integer
- |
- |  Convert a string or number to an integer, if possible.  A floating point
- |  argument will be truncated towards zero (this does not include a string
- |  representation of a floating point number!)  When converting a string, use
- |  the optional base.  It is an error to supply a base when converting a
- |  non-string. If the argument is outside the integer range a long object
- |  will be returned instead.
- |
- |  Methods defined here:
- |
- |  __abs__(...)
- |      x.__abs__() < == > abs(x)
-...
-\end{lstlisting}
-\noindent and because ``1'' is an integer, we get a description about the {\ft int} class and all its methods. Here the output has been truncated because it is very long and detailed.
-
-Similarly, we can obtain a list of object attributes (including methods) for any object using the command {\ft dir}. For example:
-\begin{lstlisting}
->>> dir(1)
-["__abs__", "__add__", "__and__", "__class__", "__cmp__", "__coerce__", 
-"__delattr__", "__div__", "__divmod__", "__doc__", "__float__", 
-"__floordiv__", "__getattribute__", "__getnewargs__", "__hash__", "__hex__", 
-"__index__", "__init__", "__int__", "__invert__", "__long__", "__lshift__", 
-"__mod__", "__mul__", "__neg__", "__new__", "__nonzero__", "__oct__", 
-"__or__", "__pos__", "__pow__", "__radd__", "__rand__", "__rdiv__", 
-"__rdivmod__", "__reduce__", "__reduce_ex__", "__repr__", "__rfloordiv__", 
-"__rlshift__", "__rmod__", "__rmul__", "__ror__", "__rpow__", "__rrshift__", 
-"__rshift__", "__rsub__", "__rtruediv__", "__rxor__", "__setattr__", 
-"__str__", "__sub__", "__truediv__", "__xor__"]
-\end{lstlisting}
-
-\goodbreak\section{Types of variables}
-
-\index{type}
-Python is a dynamically typed language, meaning that variables do not have a type and therefore do not have to be declared.  Variables may also change the type of value they hold through their lives.  Values, on the other hand, do have a type. You can query a variable for the type of value it contains:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> a = 3
->>> type(a)
-<type 'int'>
->>> a = 3.14
->>> type(a)
-<type 'float'>
->>> a = "hello python"
->>> type(a)
-<type 'str'>
-\end{lstlisting}
-
-Python also includes, natively, data structures such as lists and dictionaries.
-
-\goodbreak\subsection{{\ft int} and {\ft long}}
-
-\index{int}\index{long}
-
-There are two types representing integer numbers: {\ft int} and {\ft long}. The difference is that {\ft int} corresponds to the microprocessor"s native bit length.  Typically, this is 32 bits and can hold signed integers in range $[-2^{31}, +2^{31})$, whereas the {\ft long} type can hold almost any arbitrary integer. It is important that Python automatically converts one into the other as necessary, and you can mix and match the two types in computations. Here is an example:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> a = 1024
->>> type(a)
-<type 'int'>
->>> b = a ** 128
->>> b
-20815864389328798163850480654728171077230524494533409610638224700807216119346720
-59602447888346464836968484322790856201558276713249664692981627981321135464152584
-82590187784406915463666993231671009459188410953796224233873542950969577339250027
-68876520583464697770622321657076833170056511209332449663781837603694136444406281
-042053396870977465916057756101739472373801429441421111406337458176
->>> type(b)
-<type "long">
-\end{lstlisting}
-
-Computers represent 32-bit integer numbers by converting them to base 2. The conversion works in the following way:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
-def int2binary(n, nbits=32):
-    if n<0:
-        return [1 if bit == 0 else 0 for bit in int2binary(-n-1, nbits)]
-    bits = [0] * nbits
-    for i in range(nbits):
-        n, bits[i] = divmod(n, 2)
-    if n: raise OverflowError
-    return bits
-\end{lstlisting}
-
-\index{two"s complement}
-
-The case $n<0$ is called {\it two"s complement} and is defined as the value obtained by subtracting the number from the largest power of 2 ($2^{32}$ for 32 bits). Just by looking at the most significant bit, one can determine the sign of the binary number (1 for negative and 0 for zero or positive).
-
-\goodbreak\subsection{{\ft float} and {\ft decimal}}
-
-\index{float}\index{double}\index{decimal}\index{binary representation}
-
-There are two ways to represent decimal numbers in Python: using the native double precision (64 bits) representation, {\ft float}, or using the {\ft decimal} module.
-
-Most numerical problems are dealt with simply using {\ft float}:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> pi = 3.141592653589793
->>> two_pi = 2.0 * pi
-\end{lstlisting}
-
-Floating point numbers are internally represented as follows:
-
-\begin{equation}
-x = \pm m 2^e
-\end{equation}
-
-where $x$ is the number, $m$ is called the {\it mantissa} and is zero or a number in the range [1, 2), and $e$ is called the {\it exponent}. The sign, $m$, and $e$ can be computed using the following algorithm, which also writes their representation in binary:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
-def float2binary(x, nm=4, ne=4):
-    if x == 0:
-        return 0, [0] * nm, [0] * ne
-    sign, mantissa, exponent = (1 if x<0 else 0), abs(x), 0
-    while abs(mantissa)>=2:
-        mantissa, exponent = 0.5 * mantissa, exponent+1
-    while 0<abs(mantissa)<1:
-        mantissa, exponent = 2.0 * mantissa, exponent-1
-    mantissa = int2binary(int(2 ** (nm-1) * mantissa), nm)
-    exponent = int2binary(exponent, ne)
-    return sign, mantissa, exponent
-\end{lstlisting}
-
-Because the exponent is stored in a fixed number of bits (11 for a 64-bit floating point number), exponents smaller than $-$1022 and larger than 1023 cannot be represented. An arithmetic operation that returns a number smaller than $2^{-1022} \simeq 10^{-308}$ cannot be represented and results in an underflow error. An operation that returns a number larger than $2^{1023}\simeq 10^{308}$ also cannot be represented and results in an overflow error.
-
-Here is an example of overflow:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> a = 10.0 ** 200
->>> a * a
-inf
-\end{lstlisting}
-
-And here is an example of underflow:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> a = 10.0 ** -200
->>> a * a
-0.0
-\end{lstlisting}
-
-Another problem with finite precision arithmetic is the loss of precision in computation. Consider the case of the difference between two numbers with very different orders of magnitude. To compute the difference, the CPU reduces them to the same exponent (the largest of the two) and then computes the difference in the two mantissas. If two numbers differ by a factor $2^k$, then the mantissa of the smallest number, in binary, needs to be shifted by $k$ positions, thus resulting in a loss of information because the $k$ least significant bits in the mantissa are ignored. If the difference between the two numbers is greater than a factor $2^{52}$, all bits in the mantissa of the smallest number are ignored, and the smallest number becomes completely invisible.
-
-Following is a practical example that produces an incorrect result:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> a = 1.0
->>> b = 2.0 ** 53
->>> a+b-b
-0.0
-\end{lstlisting}
-
-a simple example of what occurs internally in a processor to add two floating point numbers together. The IEEE 754 standard states that for 32-bit floating point numbers, the exponent has a range of $-$126 to +127:
+Every binding is introduced by one of three keywords:
 
 \begin{lstlisting}
-262 in IEEE 754: 0 10000111 00000110000000000000000  (+ e:8 m:1.0234375)
-  3 in IEEE 754: 0 10000000 10000000000000000000000  (+ e:1 m:1.5)
-265 in IEEE 754: 0 10000111 00001001000000000000000
+let pi = 3.141592653589793   # immutable, value fixed at runtime
+var counter = 0              # mutable
+const Tau = 2.0 * pi         # compile-time constant
+counter = counter + 1
 \end{lstlisting}
 
-To add 262.0 to 3.0, the exponents must be the same. The exponent of the lesser number is increased to the exponent of the greater number.  In this case, 3"s exponent must be increased by 7.  Increasing the exponent by 7 means the mantissa must be shifted seven binary digits to the right:
+A {\ft let} binding cannot be reassigned; a {\ft var} can. The compiler infers the type from the initializer; you can write it explicitly when there is no initializer or when you want to constrain the literal:
 
 \begin{lstlisting}
-0 10000111 00000110000000000000000
-0 10000111 00000011000000000000000  (The implied ``1'' is also pushed seven places to the right)
-------------------------------------
-0 10000111 00001001000000000000000  which is the IEEE 754 format for 265.0
+var n: int               # zero-initialized
+var x: float = 0.5
+let xs: seq[float] = @[]
 \end{lstlisting}
 
-In the case of two numbers in which the exponent is greater than the number of digits in the mantissa, the smaller number is shifted right off the end.  The effect is a zero added to the larger number.
+\goodbreak\subsection{Numbers, booleans, and characters}
 
-In some cases, only some of the bits of the smaller number"s mantissa are lost if a partial addition occurs.
+\index{int}\index{float}\index{bool}\index{char}
 
-This precision issue is always present but not always obvious. It may consist of a small discrepancy between the true value and the computed value. This difference may increase during the computation, in particular, in iterative algorithms, and may be sizable in the result of a complex algorithm.
-
-Python also has a module for  decimal floating point arithmetic that allows decimal numbers to be represented exactly. The class Decimal incorporates a notion of significant places (unlike the hardware-based binary floating point, the decimal module has a user-alterable precision):
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> from decimal import Decimal, getcontext
->>> getcontext().prec = 28  # set precision
->>> Decimal(1) / Decimal(7)
-Decimal("0.1428571428571428571428571429")
-\end{lstlisting}
-
-Decimal numbers can be used almost everywhere in place of floating point number arithmetic but are slower and should be used only where arbitrary precision arithmetic is required. It does not suffer from the overflow, underflow, and precision issues described earlier:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> from decimal import Decimal
->>> a = Decimal(10.0) ** 300
->>> a * a
-Decimal("1.000000000000000000000000000E+600")
-\end{lstlisting}
-
-\goodbreak\subsection{{\ft complex}}
-
-\index{complex}
-
-Python has native support for complex numbers. The imaginary unit is represented by the character {\ft j}:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> c = 1+2j
->>> c
-(1+2j)
->>> c.real
-1.0
->>> c.imag
-2.0
->>> abs(c)
-2.2360679775
-\end{lstlisting}
-
-The real and imaginary parts of a complex number are stored as 64-bit floating point numbers.
-
-Normal arithmetic operations are supported. The {\ft cmath} module contains trigonometric and other functions for complex numbers. For example, 
+The fundamental numeric types are {\ft int} (machine word, signed), {\ft int8}, {\ft int16}, {\ft int32}, {\ft int64}, the unsigned variants {\ft uint8}--{\ft uint64}, and the floating-point types {\ft float} (a synonym for {\ft float64}) and {\ft float32}. {\ft bool} has values {\ft true} and {\ft false}; {\ft char} is an 8-bit byte.
 
 \begin{lstlisting}
->>> phi = 1j
->>> import cmath
->>> cmath.exp(phi)
-(0.540302305868+0.841470984808j)
+let a = 7              # int
+let b = 3.5            # float
+let big: int64 = 1'i64 shl 40
+let mask: uint32 = 0x9d2c5680'u32
+echo a div 2           # integer division: 3
+echo a mod 2           # remainder: 1
+echo a / 2             # float division: 3.5
+echo 2.0 ^ 10          # 1024.0 (power)
+echo not true          # false
 \end{lstlisting}
 
+The bitwise operators are spelled {\ft and}, {\ft or}, {\ft xor}, {\ft not}, {\ft shl}, {\ft shr} (in Nim {\ft and}/{\ft or}/{\ft not} cover both logical and bitwise; the meaning depends on the operand types). Type suffixes such as {\ft 'i64} and {\ft 'u32} fix the type of an integer literal.
 
-\goodbreak\subsection{{\ft str}}
+\goodbreak\subsection{Strings and stringification}
 
-\index{str} \index{ASCII} \index{UTF8} \index{Unicode} \index{encode}
+\index{string}
 
-Python supports the use of two different types of strings: ASCII strings and Unicode strings. ASCII strings are delimited by {\ft "..."}, {\ft "..."}, {\ft """..."""}, or {\ft """..."""}. Triple quotes delimit multiline strings. Unicode strings start with a {\ft u}, followed by the string containing Unicode characters. A Unicode string can be converted into an ASCII string by choosing an encoding (e.g., UTF8):
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> a = "this is an ASCII string"
->>> b = u"This is a Unicode string"
->>> a = b.encode("utf8")
-\end{lstlisting}
-
-After executing these three commands, the resulting {\ft a} is an ASCII string storing UTF8 encoded characters.
-
-It is also possible to write variables into strings in various ways:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> "number is " + str(3)
-number is 3
->>> "number is %s" % (3)
-number is 3
->>> "number is %(number)s" % dict(number=3)
-number is 3
-\end{lstlisting}
-
-The final notation is more explicit and less error prone and is to be preferred.
-
-Many Python objects, for example, numbers, can be serialized into strings using {\ft str} or {\ft repr}. These two commands are very similar but produce slightly different output. For example, 
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> for i in [3, "hello"]:
-...     print(str(i), repr(i))
-3 3
-hello "hello"
-\end{lstlisting}
-
-For user-defined classes, {\ft str} and {\ft repr} can be defined and redefined using the special operators {\ft \_\_str\_\_} and {\ft \_\_repr\_\_}. These are briefly described later in this chapter. For more information on the topic, refer to the official Python documentation~\cite{pydocs}.
-
-Another important characteristic of a Python string is that it is an iterable object, similar to a list:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> for i in "hello":
-...     print(i)
-h
-e
-l
-l
-o
-\end{lstlisting}
-
-\goodbreak\subsection{{\ft list} and {\ft array}}
-
-\index{list}\index{array}
-
-The distinction between lists and arrays is usually in their implementation and in the relative difference in speed of the operations they can perform. Python defines a type called {\ft list} that internally is implemented more like an array.
-
-The main methods of Python lists are append, insert, and delete.  Other useful methods include count, index, reverse, and sort:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> b = [1, 2, 3]
->>> type(b)
-<type "list">
->>> b.append(8)
->>> b.insert(2, 7)  # insert 7 at index 2 (3rd element)
->>> del b[0]
->>> b
-[2, 7, 3, 8]
->>> len(b)
-4
->>> b.append(3)
->>> b.reverse()
->>> b, " 3 appears ", b.count(3), " times.  The number 7 appears at index ", b.index(7)
-[3, 8, 3, 7, 2] 3 appears 2 times.  The number 7 appears at index 3
-
-\end{lstlisting}
-
-Lists can be sliced:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> a= [2, 7, 3, 8]
->>> a[:3]
-[2, 7, 3]
->>> a[1:]
-[7, 3, 8]
->>> a[-2:]
-[3, 8]
-\end{lstlisting}
-\noindent and concatenated/joined:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> a = [2, 7, 3, 8]
->>> a = [2, 3]
->>> b = [5, 6]
->>> a + b
-[2, 3, 5, 6]
-\end{lstlisting}
-
-A list is iterable; you can loop over it:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> a = [1, 2, 3]
->>> for i in a:
-...     print(i)
-1
-2
-3
-\end{lstlisting}
-
-A list can also be sorted in place with the {\ft sort} method:
+Strings are mutable, length-prefixed byte sequences. Concatenation is the {\ft \&} operator; conversion to a string is the {\ft \$} prefix.
 
 \begin{lstlisting}
->>> a.sort()
+let name = "world"
+let greeting = "Hello, " & name & "!"
+echo greeting              # Hello, world!
+echo $42 & " is a number"  # 42 is a number
+echo greeting.len          # 13
+echo greeting[0 ..< 5]     # "Hello"
+echo greeting.toLowerAscii # std/strutils
 \end{lstlisting}
 
-\index{list comprehension}
+For formatted floating-point output, the standard library provides {\ft formatFloat} and {\ft \&""} string interpolation:
 
-There is a very common situation for which a {\it list comprehension} can be used. Consider the following code:
-
-%%% META:FILE:test.py
 \begin{lstlisting}
->>> a = [1, 2, 3, 4, 5]
->>> b = []
->>> for x in a:
-...     if x % 2 == 0:
-...         b.append(x * 3)
->>> b
-[6, 12]
+import std/strutils, std/strformat
+let p = 3.14159
+echo formatFloat(p, ffDecimal, 3)   # 3.142
+echo &"pi rounded is {p:.3f}"       # pi rounded is 3.142
 \end{lstlisting}
 
-This code clearly processes a list of items, selects and modifies a subset of the input list, and creates a new result list. This code can be entirely replaced with the following list comprehension:
+\goodbreak\section{Composite types}
 
-%%% META:FILE:test.py
+\goodbreak\subsection{Sequences and arrays}
+
+\index{seq}\index{array}
+
+A {\ft seq[T]} is a heap-allocated, growable, ordered list of {\ft T}; it replaces Python's {\ft list}. An {\ft array[N, T]} has a fixed length {\ft N} known at compile time. Both are zero-indexed.
+
 \begin{lstlisting}
->>> a = [1, 2, 3, 4, 5]
->>> b = [x * 3 for x in a if x % 2 == 0]
->>> b
-[6, 12]
+var xs: seq[int] = @[1, 2, 3]   # @[]: empty seq literal
+xs.add 4                         # @[1, 2, 3, 4]
+xs[0] = 10
+echo xs.len                      # 4
+echo xs[^1]                      # 4 (last element)
+echo xs[1 .. 2]                  # @[2, 3] (slice)
+
+var grid: array[3, float] = [0.0, 0.0, 0.0]
+grid[2] = 1.0
+
+var zeros = newSeq[float](100)               # 100 zeros
+let ones = newSeqWith(100, 1.0)              # std/sequtils
+let evens = (0 ..< 10).toSeq().mapIt(it * 2) # @[0, 2, 4, ...]
 \end{lstlisting}
 
-Python has a module called {\ft array}. It provides an efficient array implementation. Unlike lists, array elements must all be of the same type, and the type must be either a char, short, int, long, float, or double.  A type of char, short, int, or long may be either signed or unsigned. Notice these are C-types, not Python types.
+The {\ft openArray[T]} type is used as a parameter type to accept either a {\ft seq[T]}, an {\ft array}, or a slice without copying.
 
-%%% META:FILE:test.py
 \begin{lstlisting}
->>> from array import array
->>> a = array("d", [1, 2, 3, 4, 5])
-array("d", [1.0, 2.0, 3.0, 4.0, 5.0])
+proc sum(xs: openArray[float]): float =
+  for x in xs: result += x
+
+echo sum(@[1.0, 2.0, 3.0])
+echo sum([10.0, 20.0])
 \end{lstlisting}
 
-An array object can be used in the same way as a list, but its elements must all be of the same type, specified by the first argument of the constructor (``d'' for double, ``l'' for signed long, ``f'' for float, and ``c'' for character).  For a complete list of available options, refer to the official Python documentation.
-
-Using ``array'' over ``list'' can be faster, but more important, the ``array'' storage is more compact for large arrays.
-
-\goodbreak\subsection{{\ft tuple}}
+\goodbreak\subsection{Tuples}
 
 \index{tuple}
 
-A tuple is similar to a list, but its size and elements are immutable. If a tuple element is an object, the object itself is mutable, but the reference to the object is fixed. A tuple is defined by elements separated by a comma and optionally delimited by round parentheses:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> a = 1, 2, 3
->>> a = (1, 2, 3)
-\end{lstlisting}
-
-The round brackets are required for a tuple of zero elements such as
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> a = ()  # this is an empty tuple
-\end{lstlisting}
-
-A trailing comma is required for a one-element tuple but not for two or more elements:
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> a = (1)    # not a tuple
->>> a = (1,)   # this is a tuple of one element
->>> b = (1, 2)  # this is a tuple of two elements
-\end{lstlisting}
-
-Since lists are mutable; this works:
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> a = [1, 2, 3]
->>> a[1] = 5
->>> a
-[1, 5, 3]
-\end{lstlisting}
-\noindent the element assignment does not work for a tuple:
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> a = (1, 2, 3)
->>> a[1]
-2
->>> a[1] = 5
-Traceback (most recent call last):
-  File "<stdin>", line 1, in <module>
-TypeError: "tuple" object does not support item assignment
-\end{lstlisting}
-
-A tuple, like a list, is an iterable object. Notice that a tuple consisting of a single element must include a trailing comma:
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> a = (1)
->>> type(a)
-<type 'int'>
->>> a = (1,)
->>> type(a)
-<type "tuple">
-\end{lstlisting}
-
-Tuples are very useful for efficient packing of objects because of their immutability. The brackets are often optional.  You may easily get each element of a tuple by assigning multiple variables to a tuple at one time:
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> a = (2, 3, "hello")
->>> (x, y, z) = a
->>> x
-2
->>> z
-hello
->>> a = "alpha", 35, "sigma"  # notice the rounded brackets are optional
->>> p, r, q = a
-print(r)
-35
-\end{lstlisting}
-
-\goodbreak\subsection{{\ft dict}}
-
-\index{dict}
-
-A Python {\ft dict}-ionary is a hash table that maps a key object to a value object:
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> a = {"k":"v", "k2":3}
->>> a["k"]
-v
->>> a["k2"]
-3
->>> "k" in a
-True
->>> "v" in a
-False
-\end{lstlisting}
-
-You will notice that the format to define a dictionary is the same as the JavaScript Object Notation [JSON].  Dictionaries may be nested:
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> a = {"x":3, "y":54, "z":{"a":1, "b":2}}
->>> a["z"]
-{"a": 1, "b": 2}
->>> a["z"]["a"]
-1
-\end{lstlisting}
-
-Keys can be of any hashable type (int, string, or any object whose class implements the {\ft \_\_hash\_\_} method). Values can be of any type. Different keys and values in the same dictionary do not have to be of the same type. If the keys are alphanumeric characters, a dictionary can also be declared with the alternative syntax:
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> a = dict(k="v", h2=3)
->>> a["k"]
-v
->>> a
-{"h2": 3, "k": "v"}
-\end{lstlisting}
-
-Useful methods are {\ft has\_key}, {\ft keys}, {\ft values}, {\ft items}, and {\ft update}:
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> a = dict(k="v", k2=3)
->>> a.keys()
-["k2", "k"]
->>> a.values()
-[3, "v"]
->>> a.update({"n1":"new item"})      # adding a new item
->>> a.update(dict(n2="newer item"))  # alternate method to add a new item
->>> a["n3"] = "newest item"          # another method to add a new item
->>> a.items()
-[("k2", 3), ("k", "v"), ("n3", "newest item"), ("n2", "newer item"), ("n1", "new item")]
-\end{lstlisting}
-
-The {\ft items} method produces a list of tuples, each containing a key and its associated value.
-
-Dictionary elements and list elements can be deleted with the command {\ft del}:
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> a = [1, 2, 3]
->>> del a[1]
->>> a
-[1, 3]
->>> a = dict(k="v", h2=3)
->>> del a["h2"]
->>> a
-{"k": "v"}
-\end{lstlisting}
-
-Internally, Python uses the {\ft hash} operator to convert objects into integers and uses that integer to determine where to store the value.  Using a key that is not hashable will cause an {\ft un-hashable type} error:
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> hash("hello world")
--1500746465
->>> k = [1, 2, 3]
->>> a = {k:"4"}
-Traceback (most recent call last):
-  File "<stdin>", line 1, in <module>
-TypeError: unhashable type: "list"
-\end{lstlisting}
-
-\goodbreak\subsection{{\ft set}}
-
-\index{set}
-
-A set is something between a list and a dictionary. It represents a non-ordered list of unique elements.  Elements in a set cannot be repeated.  Internally, it is implemented as a hash table, similar to a set of keys in a dictionary.  A set is created using the {\ft set} constructor.  Its argument can be a list, a tuple, or an iterator:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> s = set([1, 2, 3, 4, 5, 5, 5, 5])   # notice duplicate elements are removed
->>> s
-set([1, 2, 3, 4, 5])
->>> s = set((1, 2, 3, 4, 5))
->>> s
-set([1, 2, 3, 4, 5])
->>> s = set(i for i in range(1, 6))
->>> s
-set([1, 2, 3, 4, 5])
-\end{lstlisting}
-
-Sets are not ordered lists therefore appending to the end is not applicable.  Instead of {\ft append}, add elements to a set using the {\ft add} method:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> s = set()
->>> s.add(2)
->>> s.add(3)
->>> s.add(2)
->>> s
-set([2, 3])
-\end{lstlisting}
-
-Notice that the same element cannot be added twice (2 in the example). There is no exception or error thrown when trying to add the same element more than once.
-
-Because sets are not ordered, the order in which you add items is not necessarily the order in which they will be returned:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> s = set([6, "b", "beta", -3.4, "a", 3, 5.3])
->>> (s)
-set(["a", 3, 6, 5.3, "beta", "b", -3.4])
-\end{lstlisting}
-
-
-The {\ft set} object supports normal set operations like union, intersection, and difference:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> a = set([1, 2, 3])
->>> b = set([2, 3, 4])
->>> c = set([2, 3])
->>> a.union(b)
-set([1, 2, 3, 4])
->>> a.intersection(b)
-set([2, 3])
->>> a.difference(b)
-set([1])
->>> if len(c) == len(a.intersection(c)):
-...     print("c is a subset of a")
-... else:
-...     print("c is not a subset of a")
-...
-c is a subset of a
-\end{lstlisting}
-
-To check for membership, 
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> 2 in a
-True
-\end{lstlisting}
-
-\goodbreak\section{Python control flow statements}
-
-Python uses indentation to delimit blocks of code. A block starts with a line ending with colon and continues for all lines that have a similar or higher indentation as the next line:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> i = 0
->>> while i < 3:
-...    print(i)
-...    i = i + 1
-0
-1
-2
-\end{lstlisting}
-
-It is common to use four spaces for each level of indentation.
-It is a good policy not to mix tabs with spaces, which can result in (invisible) confusion.
-
-\goodbreak\subsection{{\ft for...in}}
-
-\index{for}
-In Python, you can loop over iterable objects:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> a = [0, 1, "hello", "python"]
->>> for i in a:
-...     print(i)
-0
-1
-hello
-python
-\end{lstlisting}
-
-In the preceding example, you will notice that the loop index ``i'' takes on the values of each element in the list [0, 1, "hello", "python"] sequentially.  The Python {\ft range} keyword creates a list of integers automatically that may be used in a ``for'' loop without manually creating a long list of numbers.
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> a = range(0, 5)
->>> a
-[0, 1, 2, 3, 4]
->>> for i in a:
-...     print(i)
-0
-1
-2
-3
-4
-\end{lstlisting}
-
-The parameters for {\ft range(a, b, c)} are as follows: the first parameter is the starting value of the list.  The second parameter is the next value if the list contains one more element.  The third parameter is the increment value.
-
-The keyword {\ft range} can also be called with one parameter. It is matched to ``b'' with the first parameter defaulting to 0 and the third to 1:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> range(5)
-[0, 1, 2, 3, 4]
->>> range(53, 57)
-[53, 54, 55, 56]
->>> range(102, 200, 10)
-[102, 112, 122, 132, 142, 152, 162, 172, 182, 192]
->>> range(0, -10, -1)
-[0, -1, -2, -3, -4, -5, -6, -7, -8, -9]
-\end{lstlisting}
-
-The keyword {\ft range} is very convenient for iterating over a list of numbers.
-
-This is equivalent to the C/C++/C\#/Java syntax:
+A {\ft tuple} is a fixed-size record. Fields can be named or anonymous. Tuples support destructuring.
 
 \begin{lstlisting}
-for(int i=0; i<4; i=i+1) { ... }
+let point: (float, float) = (1.5, 2.5)
+let (x, y) = point
+echo x, " ", y                # 1.5 2.5
+
+type
+  Range = tuple[lo, hi: float]
+
+let r: Range = (lo: 0.0, hi: 1.0)
+echo r.hi - r.lo              # 1.0
 \end{lstlisting}
 
-Another useful command is {\ft enumerate}, which counts while looping and returns a tuple consisting of (index, value):
-%%% META:FILE:test.py
+A procedure can return multiple values simply by returning a tuple:
+
 \begin{lstlisting}
->>> a = [0, 1, "hello", "python"]
->>> for (i, j) in enumerate(a):    # the ( ) around i, j are optional
-...     print(i, j)
-0 0
-1 1
-2 hello
-3 python
+proc minmax(xs: openArray[float]): (float, float) =
+  var lo = xs[0]
+  var hi = xs[0]
+  for v in xs:
+    if v < lo: lo = v
+    if v > hi: hi = v
+  (lo, hi)
+
+let (mn, mx) = minmax(@[3.0, 1.0, 4.0, 1.0, 5.0])
 \end{lstlisting}
 
-There is also a keyword {\ft range(a, b, c)} that returns a list of integers starting with the value {\ft a}, incrementing by {\ft c}, and ending with the last value smaller than {\ft b}, where {\ft a} defaults to 0 and {\ft c} defaults to 1.
+\goodbreak\subsection{Tables (dictionaries)}
 
-You can jump out of a loop using {\ft break}:
-%%% META:FILE:test.py
+\index{table}\index{dict}
+
+The {\ft Table[K, V]} container in {\ft std/tables} replaces Python's {\ft dict}. {\ft initTable} creates an empty table; {\ft toTable} converts a sequence of pairs.
+
 \begin{lstlisting}
->>> for i in [1, 2, 3]:
-...      print(i)
-...      break
-1
+import std/tables
+
+var counts = initTable[string, int]()
+counts["apples"] = 3
+counts["oranges"] = 5
+counts["apples"] += 1
+echo counts["apples"]               # 4
+echo "kiwi" in counts               # false
+echo counts.getOrDefault("kiwi", 0) # 0
+
+for key, value in counts:
+  echo key, " -> ", value
 \end{lstlisting}
 
-You can jump to the next loop iteration without executing the entire code block with {\ft continue}:
-%%% META:FILE:test.py
+For deterministic key order use {\ft OrderedTable}; for thread-shared state use {\ft SharedTable}.
+
+\goodbreak\subsection{Sets}
+
+\index{set}\index{HashSet}
+
+For collections of unique values use {\ft HashSet[T]} from {\ft std/sets}.
+
 \begin{lstlisting}
->>> for i in [1, 2, 3]:
-...      print(i)
-...      continue
-...      print("test")
-1
-2
-3
+import std/sets
+
+var seen: HashSet[int]
+seen.incl 5
+seen.incl 7
+seen.incl 5            # already there
+echo 5 in seen         # true
+echo seen.card         # 2
+
+let alphabet = toHashSet("ABCDE")
+echo 'C' in alphabet
 \end{lstlisting}
 
-Python also supports list comprehensions, and you can build lists using the following syntax:
-%%% META:FILE:test.py
+The built-in {\ft set[T]} (lowercase) is a fast bitset for ordinal types like {\ft char} or small enums; {\ft HashSet} works for any hashable type.
+
+\goodbreak\section{Control flow}
+
+\goodbreak\subsection{{\ft if}, {\ft case}, {\ft while}, {\ft for}}
+
+\index{if}\index{while}\index{for}\index{case}
+
+{\ft if}/{\ft elif}/{\ft else} works as in most languages; it is also an expression.
+
 \begin{lstlisting}
->>> a = [i * i for i in [0, 1, 2, 3]:
->>> a
-[0, 1, 4, 9]
+let x = 7
+if x < 0:
+  echo "negative"
+elif x == 0:
+  echo "zero"
+else:
+  echo "positive"
+
+let parity = if x mod 2 == 0: "even" else: "odd"
 \end{lstlisting}
 
-Sometimes you may need a counter to ``count'' the elements of a list while looping:
-%%% META:FILE:test.py
+{\ft case} dispatches on a value (typically an ordinal):
+
 \begin{lstlisting}
->>> a = [e * (i+1) for (i, e) in enumerate(["a", "b", "c", "d"])]
->>> a
-["a", "bb", "ccc", "dddd"]
+let grade = 'B'
+case grade
+of 'A': echo "excellent"
+of 'B', 'C': echo "good"
+of 'D' .. 'F': echo "needs work"
+else: echo "?"
 \end{lstlisting}
 
+{\ft while} loops until its condition becomes false. {\ft break} and {\ft continue} work as in C/Python.
 
-\goodbreak\subsection{{\ft while}}
-
-\index{while}
-Comparison operators in Python follow the C/C++/Java operators of == , !=, ..., and so on.  However, Python also accepts the <> operator as not equal to and is equivalent to !=.  Logical operators are {\ft and}, {\ft or}, and {\ft not}.
-
-The {\ft while} loop in Python works much as it does in many other programming languages, by looping an indefinite number of times and testing a condition before each iteration. If the condition is {\ft False}, the loop ends:
-%%% META:FILE:test.py
 \begin{lstlisting}
->>> i = 0
->>> while i < 10:
-...     i = i + 1
->>> i
-10
+var n = 1
+while n < 1000:
+  n = n * 2
+echo n            # 1024
 \end{lstlisting}
 
-The {\ft for} loop was introduced earlier in this chapter.
+{\ft for} iterates over any iterator. Built-in iterators include integer ranges and any container's elements.
 
-There is no {\ft loop...until} or {\ft do...while} construct in Python.
-
-\goodbreak\subsection{{\ft if...elif...else}}
-
-\index{if} \index{elif} \index{else}
-The use of conditionals in Python is intuitive:
-%%% META:FILE:test.py
 \begin{lstlisting}
->>> for i in range(3):
-...     if i == 0:
-...         print("zero")
-...     elif i == 1:
-...         print("one")
-...     else:
-...         print("other")
-zero
-one
-other
+for i in 0 ..< 5: echo i        # 0 1 2 3 4 (exclusive upper)
+for i in 1 .. 5: echo i         # 1 2 3 4 5 (inclusive)
+for i in countdown(5, 1): echo i
+for i in countup(0, 9, 2): echo i  # 0 2 4 6 8
+
+let xs = @[10, 20, 30]
+for v in xs: echo v             # values
+for i, v in xs: echo i, " ", v  # index and value
 \end{lstlisting}
 
-The {\ft elif} means ``else if.'' Both {\ft elif} and {\ft else} clauses are optional. There can be more than one {\ft elif} but only one {\ft else} statement. Complex conditions can be created using the {\ft not}, {\ft and}, and {\ft or} logical operators:
+\goodbreak\section{Procedures}
+
+\goodbreak\subsection{{\ft proc}, default arguments, and {\ft result}}
+
+\index{proc}\index{result}
+
+A procedure is declared with {\ft proc}. Each argument has a type. The return type follows a colon. The body uses indentation; {\ft =} introduces it.
+
 \begin{lstlisting}
->>> for i in range(3):
-...     if i == 0 or (i == 1 and i + 1 == 2):
-...         print("0 or 1")
+proc square(x: float): float =
+  x * x                      # last expression is the return value
+
+echo square(3.0)             # 9.0
 \end{lstlisting}
 
-\goodbreak\subsection{{\ft try...except...else...finally}}
+Inside any procedure, the special variable {\ft result} is automatically declared, initialized to its zero value, and returned at the end. This is useful when a result is built up incrementally.
 
-\index{try} \index{except} \index{finally} \index{Exception}
-Python can throw - pardon, raise - exceptions:
-%%% META:FILE:test.py
 \begin{lstlisting}
->>> try:
-...     a = 1 / 0
-... except Exception, e:
-...     print("oops: %s" % e)
-... else:
-...     print("no problem here")
-... finally:
-...     print("done")
-oops: integer division or modulo by zero
-done
+proc factorial(n: int): int =
+  result = 1
+  for i in 2 .. n:
+    result *= i
+
+echo factorial(6)            # 720
 \end{lstlisting}
 
-If an exception is raised, it is caught by the {\ft except} clause, and the {\ft else} clause is not executed.
-The {\ft finally} clause is always executed.
+You can also use {\ft return value} to exit early. Default arguments are written {\ft name: type = default} and may be passed positionally or by name:
 
-There can be multiple {\ft except} clauses for different possible exceptions:
-%%% META:FILE:test.py
 \begin{lstlisting}
->>> try:
-...     raise SyntaxError
-... except ValueError:
-...     print("value error")
-... except SyntaxError:
-...     print("syntax error")
-syntax error
+proc clamp(x: float, lo = 0.0, hi = 1.0): float =
+  if x < lo: lo
+  elif x > hi: hi
+  else: x
+
+echo clamp(2.0)                          # 1.0
+echo clamp(-3.0, lo = -1.0, hi = 1.0)    # -1.0
 \end{lstlisting}
 
-The {\ft finally} clause is guaranteed to be executed while the {\ft except} and {\ft else} are not.  In the following example, the function returns within a {\ft try} block.  This is bad practice, but it shows that the {\ft finally} will execute regardless of the reason the {\ft try} block is exited:
-%%% META:FILE:test.py
+A procedure that does not return a value omits the return-type annotation:
+
 \begin{lstlisting}
->>> def f(x):
-...    try:
-...        r = x * x
-...        return r   # bad practice
-...    except:
-...        print("exception occurred %s" % e
-...    else:
-...        print("nothing else to do")
-...    finally:
-...        print("Finally we get here")
-...
->>> y = f(3)
-Finally we get here
->>> "result is ", y
-result is  9
+proc greet(name: string) =
+  echo "Hello, ", name
 \end{lstlisting}
 
-For every {\ft try}, you must have either an {\ft except} or a {\ft finally}, while the {\ft else} is optional.
+\goodbreak\subsection{Generics}
 
-Here is a list of built-in Python exceptions:
+\index{generics}
+
+Generic parameters go in square brackets after the procedure name. The compiler instantiates a separate copy for each set of types used.
+
 \begin{lstlisting}
-BaseException
- +-- SystemExit
- +-- KeyboardInterrupt
- +-- Exception
-      +-- GeneratorExit
-      +-- StopIteration
-      +-- StandardError
-      |    +-- ArithmeticError
-      |    |    +-- FloatingPointError
-      |    |    +-- OverflowError
-      |    |    +-- ZeroDivisionError
-      |    +-- AssertionError
-      |    +-- AttributeError
-      |    +-- EnvironmentError
-      |    |    +-- IOError
-      |    |    +-- OSError
-      |    |         +-- WindowsError (Windows)
-      |    |         +-- VMSError (VMS)
-      |    +-- EOFError
-      |    +-- ImportError
-      |    +-- LookupError
-      |    |    +-- IndexError
-      |    |    +-- KeyError
-      |    +-- MemoryError
-      |    +-- NameError
-      |    |    +-- UnboundLocalError
-      |    +-- ReferenceError
-      |    +-- RuntimeError
-      |    |    +-- NotImplementedError
-      |    +-- SyntaxError
-      |    |    +-- IndentationError
-      |    |         +-- TabError
-      |    +-- SystemError
-      |    +-- TypeError
-      |    +-- ValueError
-      |    |    +-- UnicodeError
-      |    |         +-- UnicodeDecodeError
-      |    |         +-- UnicodeEncodeError
-      |    |         +-- UnicodeTranslateError
-      +-- Warning
-           +-- DeprecationWarning
-           +-- PendingDeprecationWarning
-           +-- RuntimeWarning
-           +-- SyntaxWarning
-           +-- UserWarning
-           +-- FutureWarning
-           +-- ImportWarning
-           +-- UnicodeWarning
+proc swap[T](a, b: var T) =
+  let tmp = a
+  a = b
+  b = tmp
+
+var i = 1
+var j = 2
+swap(i, j)
+
+proc maxOf[T](xs: openArray[T]): T =
+  result = xs[0]
+  for x in xs:
+    if x > result: result = x
+
+echo maxOf(@[3, 1, 4, 1, 5, 9, 2, 6])
+echo maxOf(@["apple", "kiwi", "pear"])
 \end{lstlisting}
 
-For a detailed description of each of these, refer to the official Python documentation.
+The {\ft var T} marker on an argument means the procedure can mutate it; without {\ft var}, arguments are passed by value (or by reference for {\ft ref} types) and cannot be reassigned inside the procedure.
 
-Any object can be raised as an exception, but it is good practice to raise objects that extend one of the built-in exception classes.
+\goodbreak\subsection{First-class procedures and closures}
 
-\goodbreak\subsection{{\ft def...return}}
+\index{closure}
 
-\index{def} \index{return}
+A procedure type is written {\ft proc(args): RetType}. Procedure values can be stored in variables, passed as arguments, and returned from other procedures. When a returned procedure captures a local variable, Nim creates a closure on the heap.
 
-Functions are declared using {\ft def}.  Here is a typical Python function:
-%%% META:FILE:test.py
 \begin{lstlisting}
->>> def f(a, b):
-...     return a + b
->>> f(4, 2)
-6
+proc adder(n: int): proc(x: int): int =
+  result = proc(x: int): int = x + n
+
+let add3 = adder(3)
+echo add3(10)               # 13
+
+# A higher-order procedure:
+proc apply(f: proc(x: float): float, xs: seq[float]): seq[float] =
+  for x in xs: result.add f(x)
+
+let squared = apply(proc(x: float): float = x * x, @[1.0, 2.0, 3.0])
+echo squared                # @[1.0, 4.0, 9.0]
 \end{lstlisting}
 
-There is no need (or way) to specify the type of an argument(s) or the return value(s). In this example, a function {\ft f} is defined that can take two arguments.
+The {\ft std/sugar} module offers a shorter {\ft =>} syntax: {\ft (x: float) =\textgreater  x * x}.
 
-\index{scope}\index{namespace}
+\goodbreak\subsection{Iterators and {\ft yield}}
 
-Functions are the first code syntax feature described in this chapter to introduce the concept of {\it scope}, or {\it namespace}.  In the preceding example, the identifiers {\ft a} and {\ft b} are undefined outside of the scope of function {\ft f}:
-%%% META:FILE:test.py
+\index{iterator}\index{yield}
+
+An {\ft iterator} produces a sequence of values lazily. Each {\ft yield} hands a value back to the {\ft for} loop calling the iterator.
+
 \begin{lstlisting}
->>> def f(a):
-...     return a + 1
->>> f(1)
-2
->>> a
-Traceback (most recent call last):
-  File "<pyshell#22>", line 1, in <module>
-    print(a)
-NameError: name "a" is not defined
+iterator countSquares(n: int): int =
+  var i = 1
+  while i * i <= n:
+    yield i * i
+    inc i
+
+for sq in countSquares(50):
+  echo sq                   # 1 4 9 16 25 36 49
 \end{lstlisting}
 
-Identifiers defined outside of the function scope are accessible within the function; observe how the identifier {\ft a} is handled in the following code:
+Iterators are central to many algorithms in this book (e.g., the Metropolis sampler in chapter~7).
 
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> a = 1
->>> def f(b):
-...     return a + b
->>> f(1)
-2
->>> a = 2
->>> f(1)  # new value of a is used
-3
->>> a = 1  # reset a
->>> def g(b):
-...     a = 2  # creates a new local a
-...     return a + b
->>> g(2)
-4
->>> a  # global a is unchanged
-1
-\end{lstlisting}
-
-If {\ft a} is modified, subsequent function calls will use the new value of the global {\ft a} because the function definition binds the storage location of the identifier {\ft a}, not the value of {\ft a} itself at the time of function declaration; however, if {\ft a} is assigned-to inside function {\ft g}, the global {\ft a} is unaffected because the new local {\ft a} hides the global value.  The external-scope reference can be used in the creation of {\it closures}:
-
-\index{closures}
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> def f(x):
-...     def g(y):
-...         return x * y
-...     return g
->>> doubler = f(2)  # doubler is a new function
->>> tripler = f(3)  # tripler is a new function
->>> quadrupler = f(4)  # quadrupler is a new function
->>> doubler(5)
-10
->>> tripler(5)
-15
->>> quadrupler(5)
-20
-\end{lstlisting}
-
-Function {\ft f} creates new functions; note that the scope of the name {\ft g} is entirely internal to {\ft f}.  Closures are extremely powerful.
-
-Function arguments can have default values and can return multiple results as a tuple (notice the parentheses are optional and are omitted in the example):
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> def f(a, b=2):
-...     return a + b, a - b
->>> x, y = f(5)
->>> x
-7
->>> y
-3
-\end{lstlisting}
-
-Function arguments can be passed explicitly by name; therefore the order of arguments specified in the caller can be different from the order of arguments with which the function was defined:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> def f(a, b=2):
-...     return a + b, a - b
->>> x, y = f(b=5, a=2)
->>> x
-7
->>> y
--3
-\end{lstlisting}
-
-Functions can also take a runtime-variable number of arguments.  Parameters that start with {\ft * } and {\ft ** } must be the last two parameters.  If the {\ft ** } parameter is used, it must be last in the list.  Extra values passed in will be placed in the {\ft * identifier} parameter, whereas named values will be placed into the {\ft ** identifier}.  Notice that when passing values into the function, the unnamed values must be before any and all named values:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> def f(a, b, * extra, ** extraNamed):
-...     print("a = ", a)
-...     print("b = ", b)
-...     print("extra = ", extra)
-...     print("extranamed = ", extraNamed)
->>> f(1, 2, 5, 6, x=3, y=2, z=6)
-a =  1
-b =  2
-extra =  (5, 6)
-extranamed =  {"y": 2, "x": 3, "z": 6}
-\end{lstlisting}
-
-Here the first two parameters (1 and 2) are matched with the parameters {\ft a} and {\ft b}, while the tuple 5, 6 is placed into {\ft extra} and the remaining items (which are in a dictionary format) are placed into {\ft extraNamed}.
-
-In the opposite case, a list or tuple can be passed to a function that requires individual positional arguments by unpacking them:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> def f(a, b):
-...     return a + b
->>> c = (1, 2)
->>> f( * c)
-3
-\end{lstlisting}
-\noindent and a dictionary can be unpacked to deliver keyword arguments:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> def f(a, b):
-...     return a + b
->>> c = {"a":1, "b":2}
->>> f( ** c)
-3
-\end{lstlisting}
-
-\goodbreak\subsection{{\ft lambda}}
-
-\index{lambda}
-
-The keyword {\ft lambda} provides a way to define a short unnamed function:
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> a = lambda b: b + 2
->>> a(3)
-5
-\end{lstlisting}
-
-The expression ``{\ft lambda} [a]:[b]'' literally reads as ``a function with arguments [a] that returns [b].'' The {\ft lambda} expression is itself unnamed, but the function acquires a name by being assigned to identifier {\ft a}.  The scoping rules for {\ft def} apply to {\ft lambda} equally, and in fact, the preceding code, with respect to {\ft a}, is identical to the function declaration using {\ft def}:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> def a(b):
-...     return b + 2
->>> a(3)
-5
-\end{lstlisting}
-
-The only benefit of {\ft lambda} is brevity; however, brevity can be very convenient in certain situations.  Consider a function called {\ft map} that applies a function to all items in a list, creating a new list:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> a = [1, 7, 2, 5, 4, 8]
->>> map(lambda x: x + 2, a)
-[3, 9, 4, 7, 6, 10]
-\end{lstlisting}
-This code would have doubled in size had {\ft def} been used instead of {\ft lambda}. The main drawback of {\ft lambda} is that (in the Python implementation) the syntax allows only for a single expression; however, for longer functions, {\ft def} can be used, and the extra cost of providing a function name decreases as the length of the function grows.
-
-\index{lambda}
-
-Just like {\ft def}, {\ft lambda} can be used to {\it curry} functions: new functions can be created by wrapping existing functions such that the new function carries a different set of arguments:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> def f(a, b): return a + b
->>> g = lambda a: f(a, 3)
->>> g(2)
-5
-\end{lstlisting}
-
-Python functions created with either {\ft def} or {\ft lambda} allow refactoring of existing functions in terms of a different set of arguments.
-
-\goodbreak\section{Classes}
-
-\index{class}
-
-Because Python is dynamically typed, Python classes and objects may seem odd. In fact, member variables (attributes) do not need to be specifically defined when declaring a class, and different instances of the same class can have different attributes. Attributes are generally associated with the instance, not the class (except when declared as ``class attributes, '' which is the same as ``static member variables'' in C++/Java).
-
-Here is an example:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> class MyClass(object): pass
->>> myinstance = MyClass()
->>> myinstance.myvariable = 3
->>> myinstance.myvariable
-3
-\end{lstlisting}
-
-Notice that {\ft pass} is a do-nothing command. In this case, it is used to define a class {\ft MyClass} that contains nothing. {\ft MyClass()} calls the constructor of the class (in this case, the default constructor) and returns an object, an instance of the class. The {\ft (object)} in the class definition indicates that our class extends the built-in {\ft object} class. This is not required, but it is good practice.
-
-\index{class!Complex}
-
-Here is a more involved class with multiple methods:
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> class Complex(object):
-...    z = 2
-...    def __init__(self, real=0.0, imag=0.0):
-...        self.real, self.imag = real, imag
-...    def magnitude(self):
-...        return (self.real ** 2 + self.imag ** 2) ** 0.5
-...    def __add__(self, other):
-...        return Complex(self.real+other.real, self.imag+other.imag)
->>> a = Complex(1, 3)
->>> b = Complex(2, 1)
->>> c = a + b
->>> c.magnitude()
-5
-\end{lstlisting}
-
-Functions declared inside the class are methods. Some methods have special reserved names. For example, {\ft \_\_init\_\_} is the constructor. In the example, we created a class to store the {\ft real} and the {\ft imag} part of a complex number. The constructor takes these two variables and stores them into {\ft self} (not a keyword but a variable that plays the same role as {\ft this} in Java and {\ft ( * this)} in C++;
-this syntax is necessary to avoid ambiguity when declaring nested classes, such as a class that is local to a method inside another class, something Python allows but Java and C++ do not).
-
-The {\ft self} variable is defined by the first argument of each method. They all must have it, but they can use another variable name. Even if we use another name, the first argument of a method always refers to the object calling the method. It plays the same role as the {\ft this} keyword in Java and C++.
-
-Method {\ft \_\_add\_\_} is also a special method (all special methods start and end in double underscore) and it overloads the {\ft +} operator between {\ft self} and {\ft other}. In the example, {\ft a+b} is equivalent to a call to {\ft a.\_\_add\_\_(b)}, and the {\ft \_\_add\_\_} method receives {\ft self=a} and {\ft other=b}.
-
-All variables are local variables of the method, except variables declared outside methods, which are called {\it class variables}, equivalent to C++ {\it static member variables}, which hold the same value for all instances of the class.
-
-\goodbreak\subsection{Special methods and operator overloading}
+\goodbreak\subsection{Operator overloading}
 
 \index{operator overloading}
-\index{\_\_init\_\_}\index{\_\_add\_\_}\index{\_\_sub\_\_}\index{\_\_getitem\_\_}\index{\_\_setitem\_\_}\index{\_\_mul\_\_}\index{\_\_div\_\_}
 
-
-
-Class attributes, methods, and operators starting with a double underscore are usually intended to be private (e.g., to be used internally but not exposed outside the class), although this is a convention that is not enforced by the interpreter.
-
-Some of them are reserved keywords and have a special meaning:
-\begin{itemize}
-\item {\ft \_\_len\_\_}
-
-\item {\ft \_\_getitem\_\_}
-
-\item {\ft \_\_setitem\_\_}
-\end{itemize}
-They can be used, for example, to create a container object that acts like a list:
-\begin{lstlisting}
->>> class MyList(object):
->>>     def __init__(self, * a): self.a = list(a)
->>>     def __len__(self): return len(self.a)
->>>     def __getitem__(self, key): return self.a[key]
->>>     def __setitem__(self, key, value): self.a[key] = value
->>> b = MyList(3, 4, 5)
->>> b[1]
-4
->>> b.a[1] = 7
->>> b.a
-[3, 7, 5]
-\end{lstlisting}
-
-Other special operators include {\ft \_\_getattr\_\_} and {\ft \_\_setattr\_\_}, which define the get and set methods (getters and setters) for the class, and {\ft \_\_add\_\_}, {\ft \_\_sub\_\_}, {\ft \_\_mul\_\_}, and {\ft \_\_div\_\_}, which overload arithmetic operators. For the use of these operators, we refer the reader to the chapter on linear algebra, where they will be used to implement algebra for matrices.
-
-\goodbreak\subsection{class Financial Transaction}
-
-\index{present value}
-
-As one more example of a class, we implement a class that represents a financial transaction. We can think of a simple transaction as a single money transfer of quantity {\ft a} that occurs at a given time $t$. We adopt the convention that a positive {\ft amount} represents money flowing in and a negative value represents money flowing out.
-
-The present value (computed at time $t_0$) for a transaction occurring at time $t$ days from now of amount $A$ is defined as
-\begin{equation}
-\textrm{PV}(t, A) = A e^{-t r}
-\end{equation}
-where $r$ is the daily risk-free interest rate. If $t$ is measured in days, $r$ has to be the daily risk-free return. Here we will assume it defaults to $r=005/365$ (5\% annually).
-
-\index{class!FinancialTransaction}
-
-Here is a possible implementation of the transaction:
-
-%%% META:FILE:test.py
-\begin{lstlisting}
-from datetime import date
-from math import exp
-today = date.today()
-r_free = 0.05/365.0
-
-class FinancialTransaction(object):
-    def __init__(self, t, a, description=''):
-        self.t= t
-        self.a = a
-        self.description = description
-    def pv(self, t0=today, r=r_free):
-        return self.a * exp(r * (t0-self.t).days)
-    def __str__(self):
-        return "%.2f dollars in %i days (%s)" % \
-            (self.a, self.t, self.description)
-\end{lstlisting}
-
-Here we assume $t$ and $t_0$ are {\ft datetime.date} objects that store a date. The {\ft date} constructor takes the year, the month, and the day separated by a comma. The expression {\ft (t0-t).days} computes the distance in days between $t_0$ and $t$.
-
-\index{cash flow}
-
-Similarly, we can implement a {\it Cash Flow} class to store a list of transactions, with the {\ft add} method to add a new transaction to the list. The present value of a cash flow is the sum of the present values of each transaction:
-
-\index{class!CashFlow}
-
-%%% META:FILE:test.py
-\begin{lstlisting}
-class CashFlow(object):
-    def __init__(self):
-        self.transactions = []
-    def add(self, transaction):
-        self.transactions.append(transaction)
-    def pv(self, t0, r=r_free):
-        return sum(x.pv(t0, r) for x in self.transactions)
-    def __str__(self):
-        return "\n".join(str(x) for x in self.transactions)
-\end{lstlisting}
-
-What is the net present value at the beginning of 2012 for a bond that pays \$1000 the 20th of each month for the following 24 months (assuming a fixed interest rate of 5\% per year)?
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> bond = CashFlow()
->>> today = date(2012, 1, 1)
->>> for year in range(2012, 2014):
-...     for month in range(1, 13):
-...         coupon = FinancialTransaction(date(year, month, 20), 1000)
-...         bond.add(coupon)
->>> round(bond.pv(today, r=0.05/365), 0)
-22826
-\end{lstlisting}
-
-This means the cost for this bond should be \$22, 826.
-
-\goodbreak\section{File input/output}
-\index{Input/Output}
-\index{file.read} \index{file.write}
-
-In Python, you can open and write in a file with
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> file = open("myfile.txt", "w")
->>> file.write("hello world")
->>> file.close()
-\end{lstlisting}
-
-Similarly, you can read back from the file with
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> file = open("myfile.txt", "r")
->>> file.read()
-hello world
-\end{lstlisting}
-
-Alternatively, you can read in binary mode with ``rb, '' write in binary mode with ``wb, '' and open the file in append mode ``a'' using standard C notation.
-
-The {\ft read} command takes an optional argument, which is the number of bytes. You can also jump to any location in a file using {\ft seek}
-\index{file.seek}:
-
-You can read back from the file with {\ft read}:
-%%% META:FILE:test.py
-\begin{lstlisting}
->>> file.seek(6)
->>> file.read()
-world
-\end{lstlisting}
-\noindent and you can close the file with:
-\begin{lstlisting}
->>> file.close()
-\end{lstlisting}
-
-\goodbreak\section{How to {\ft import} modules}
-
-\index{import} \index{random}
-The real power of Python is in its library modules. They provide a large and consistent set of application programming interfaces (APIs) to many system libraries (often in a way independent of the operating system).
-
-For example, if you need to use a random number generator, you can do the following:
-\begin{lstlisting}
->>> import random
->>> random.randint(0, 9)
-5
-\end{lstlisting}
-
-This prints a random integer in the range of (0, 9], 5 in the example. The function {\ft randint} is defined in the module {\ft random}. It is also possible to import an object from a module into the current namespace:
-\begin{lstlisting}
->>> from random import randint
->>> randint(0, 9)
-\end{lstlisting}
-\noindent or import all objects from a module into the current namespace:
-\begin{lstlisting}
->>> from random import * 
->>> randint(0, 9)
-\end{lstlisting}
-\noindent or import everything in a newly defined namespace:
-\begin{lstlisting}
->>> import random as myrand
->>> myrand.randint(0, 9)
-\end{lstlisting}
-
-In the rest of this book, we will mainly use objects defined in modules {\ft math}, {\ft cmath}, {\ft os},  {\ft sys}, {\ft datetime}, {\ft time}, and {\ft pickle}. We will also use the {\ft random} module, but we will describe it in a later chapter.
-
-In the following subsections, we consider those modules that are most useful.
-
-\goodbreak\subsection{{\ft math} and {\ft cmath}}
-
-\index{math}\index{cmath}
-
-Here is a sampling of some of the methods available in the {\ft math} and {\ft cmath} packages:
-\begin{itemize}
-\item {\ft math.isinf(x)} returns true if the floating point number {\ft x} is positive or negative infinity
-
-\item {\ft math.isnan(x)} returns true if the floating point number {\ft x} is NaN; see Python documentation or IEEE 754 standards for more information
-
-\item {\ft math.exp(x)} returns {\ft e ** x}
-
-\item {\ft math.log(x[, base]} returns the logarithm of {\ft x} to the optional {\ft base}; if {\ft base} is not supplied, {\ft e } is assumed
-
-\item {\ft math.cos(x)}, {\ft math.sin(x)}, {\ft math.tan(x)} returns the cos, sin, tan of the value of {\ft x};  {\ft x} is in radians
-
-\item {\ft math.pi}, {\ft math.e} are the constants for {\ft pi} and {\ft e} to available precision
-
-\item {\ft math.isinf(x)} can be used to check if a number is {\it infinity}.
-\end{itemize}
-
-
-
-\goodbreak\subsection{{\ft os}}
-
-\index{os} \index{os.path.join} \index{os.unlink}
-
-This module provides an interface for the operating system API:
-\begin{lstlisting}
->>> import os
->>> os.chdir("..")
->>> os.unlink("filename_to_be_deleted")
-\end{lstlisting}
-
-Some of the {\ft os} functions, such as {\ft chdir}, are not thread safe, for example, they should not be used in a multithreaded environment.
-
-{\ft os.path.join} is very useful; it allows the concatenation of paths in an OS-independent way:
-\begin{lstlisting}
->>> import os
->>> a = os.path.join("path", "sub_path")
->>> a
-path/sub_path
-\end{lstlisting}
-
-System environment variables can be accessed via
-\begin{lstlisting}
->>> os.environ
-\end{lstlisting}
-\noindent which is a read-only dictionary.
-
-\goodbreak\subsection{{\ft sys}}
-
-\index{sys} \index{sys.path}
-
-The {\ft sys} module contains many variables and functions, but used the most is {\ft sys.path}. It contains a list of paths where Python searches for modules. When we try to import a module, Python searches the folders listed in {\ft sys.path}. If you install additional modules in some location and want Python to find them, you need to append the path to that location to {\ft sys.path}:
-\begin{lstlisting}
->>> import sys
->>> sys.path.append("path/to/my/modules")
-\end{lstlisting}
-
-\goodbreak\subsection{{\ft datetime}}
-
-\index{date} \index{datetime} \index{time}
-
-The use of the datetime module is best illustrated by some examples:
-\begin{lstlisting}
->>> import datetime
->>> datetime.datetime.today()
-2008-07-04 14:03:90
->>> datetime.date.today()
-2008-07-04
-\end{lstlisting}
-
-Occasionally you may need to time stamp data based on the UTC time as opposed to local time. In this case, you can use the following function:
-\begin{lstlisting}
->>> import datetime
->>> datetime.datetime.utcnow()
-2008-07-04 14:03:90
-\end{lstlisting}
-
-The {\ft datetime} module contains various classes: {\ft date}, {\ft datetime}, {\ft time}, and {\ft timedelta}. The difference between two dates or two datetimes or two time objects is a {\ft timedelta}:
-\begin{lstlisting}
->>> a = datetime.datetime(2008, 1, 1, 20, 30)
->>> b = datetime.datetime(2008, 1, 2, 20, 30)
->>> c = b - a
->>> c.days
-1
-\end{lstlisting}
-
-We can also parse dates and datetimes from strings:
-\begin{lstlisting}
->>> s = "2011-12-31"
->>> a = datetime.datetime.strptime(s, "%Y-%m-%d")
->>> a.year, a.day, a.month
-2011 31 12
-\end{lstlisting}
-
-Notice that ``\%Y'' matches the four-digit year, ``\%m'' matches the month as a number (1--12), ``\%d'' matches the day (1--31), ``\%H'' matches the hour, ``\%M'' matches the minute, and ``\%S'' matches the seconds. Check the Python documentation for more options.
-
-\goodbreak\subsection{{\ft time}}
-
-\index{time}
-
-The time module differs from {\ft date} and {\ft datetime} because it represents time as seconds from the epoch (beginning of 1970):
-\begin{lstlisting}
->>> import time
->>> t = time.time()
-1215138737.571
-\end{lstlisting}
-
-Refer to the Python documentation for conversion functions between time in seconds and time as a {\ft datetime}.
-
-\goodbreak\subsection{{\ft urllib} and {\ft json}}
-
-\index{urllib}\index{json}
-
-The {\ft urllib} is a module to download data or a web page from a URL:
+Operators are just procedures whose names are wrapped in backticks. You can overload them on user-defined types.
 
 \begin{lstlisting}
->>> import urllib.request
->>> page = urllib.request.urlopen("http://www.google.com/")
->>> html = page.read()
+type Vec2 = object
+  x, y: float
+
+proc `+`(a, b: Vec2): Vec2 = Vec2(x: a.x + b.x, y: a.y + b.y)
+proc `*`(s: float, v: Vec2): Vec2 = Vec2(x: s * v.x, y: s * v.y)
+proc `$`(v: Vec2): string = "(" & $v.x & ", " & $v.y & ")"
+
+let u = Vec2(x: 1.0, y: 2.0)
+let v = Vec2(x: 3.0, y: 4.0)
+echo u + v                  # (4.0, 6.0)
+echo 0.5 * u                # (0.5, 1.0)
 \end{lstlisting}
 
-Many web services return data in JSON format. JSON is slowly replacing XML as a favorite protocol for data transfer on the web. It is lighter, simpler to use, and more human readable. JSON can be thought of as serialized JavaScript. The JSON data can be converted to a Python object using a library called {\ft json}:
+The indexing operators {\ft `[]`} and {\ft `[]=`} can also be overloaded; chapter 4's {\ft Matrix} type uses this trick to expose two-dimensional element access.
+
+\goodbreak\section{Object types and methods}
+
+\goodbreak\subsection{{\ft object} and {\ft ref object}}
+
+\index{object}\index{ref object}
+
+An {\ft object} groups named fields. By default, objects are value types: assignment and parameter passing copy the entire structure. A {\ft ref object} is a reference type, allocated on the heap and managed by the runtime; assignment copies the pointer, not the contents.
 
 \begin{lstlisting}
->>> import json
->>> a = [1, 2, 3]
->>> b = json.dumps(a)
->>> type(b)
-<type 'str'>
->>> c = json.loads(b)
->>> a == c
-True
+type
+  Point = object         # value type
+    x, y: float
+  Stamp = ref object     # reference type
+    id: int
+    label: string
+
+let p = Point(x: 0.0, y: 1.0)        # value constructor
+let s = Stamp(id: 1, label: "A")     # ref constructor (allocates)
+echo p.y, " ", s.label
 \end{lstlisting}
 
-The module {\ft json} has {\ft loads} and {\ft dumps} methods which work very much as {\ft pickle}"s methods, but they serialize the objects into a string using JSON instead of the pickle protocol.
+Most data structures in this book ({\ft Matrix}, {\ft DisjointSets}, {\ft NeuralNetwork}, {\ft MCEngine}, ...) are {\ft ref object}s because we want them to behave like Python objects: passed by reference and mutated in place.
 
-\goodbreak\subsection{{\ft pickle}}
+A common pattern is to provide a {\ft newX} constructor procedure:
 
-\index{pickle}
-
-This is a very powerful module. It provides functions that can serialize almost any Python object, including self-referential objects. For example, let"s build a weird object:
 \begin{lstlisting}
->>> class MyClass(object): pass
->>> myinstance = MyClass()
->>> myinstance.x = "something"
->>> a = [1 , 2, {"hello":"world"}, [3, 4, [myinstance]]]
+proc newPoint(x, y: float): Point =
+  Point(x: x, y: y)
 \end{lstlisting}
-\noindent and now:
+
+\goodbreak\subsection{Methods and inheritance}
+
+\index{method}\index{inheritance}\index{RootObj}
+
+For dynamic dispatch (selecting an implementation based on the runtime type of an argument) Nim uses {\ft method} instead of {\ft proc}. The base type must inherit from {\ft RootObj}, and the base method is annotated with {\ft \{.base.\}}.
+
 \begin{lstlisting}
->>> import pickle
->>> b = pickle.dumps(a)
->>> c = pickle.loads(b)
+type
+  Shape = ref object of RootObj
+  Circle = ref object of Shape
+    radius: float
+  Rectangle = ref object of Shape
+    width, height: float
+
+method area(s: Shape): float {.base.} =
+  raise newException(CatchableError, "abstract")
+
+method area(c: Circle): float = 3.141592653589793 * c.radius ^ 2
+method area(r: Rectangle): float = r.width * r.height
+
+let shapes: seq[Shape] = @[Shape(Circle(radius: 1.0)),
+                            Shape(Rectangle(width: 2.0, height: 3.0))]
+for s in shapes: echo s.area()
 \end{lstlisting}
 
-In this example, {\ft b} is a string representation of {\ft a}, and {\ft c} is a copy of {\ft a} generated by deserializing {\ft b}.
-\noindent The module {\ft pickle} can also serialize to and deserialize from a file:
+Chapter 7's {\ft MCEngine} uses exactly this pattern: a base method {\ft simulateOnce} declares the abstract behavior, and each subclass overrides it.
+
+\goodbreak\section{Modules and visibility}
+
+\goodbreak\subsection{The export marker {\ft *}}
+
+A {\ft proc}, {\ft type}, {\ft var}, or field declared with a trailing {\ft *} is exported from its module; without it, the name is private to the file. This replaces Python's {\ft \_}-prefix convention.
+
 \begin{lstlisting}
->>> pickle.dump(a, open("myfile.pickle", "wb"))
->>> c = pickle.load(open("myfile.pickle", "rb"))
+# in nlib.nim
+proc square*(x: float): float = x * x   # public
+proc helper(x: float): float = x + 1    # private to nlib
 \end{lstlisting}
 
-\goodbreak\subsection{{\ft sqlite}}
+A consumer imports the module by file name (no extension):
 
-\index{databases}\index{sqlite}\index{class!PersistentDictionary}
-
-The Python dictionary type is very useful, but it lacks persistence because it is stored in RAM (it is lost if a program ends) and cannot be shared by more than one process running concurrently. Moreover, it is not transaction safe. This means that it is not possible to group operations together so that they succeed or fail as one.
-
-Think for example of using the dictionary to store a bank account. The key is the account number and the value is a list of transactions. We want the dictionary to be safely stored on file. We want it to be accessible by multiple processes and applications. We want transaction safety: it should not be possible for an application to fail during a money transfer, resulting in the disappearance of money.
-
-Python provides a module called {\ft shelve} with the same interface as {\ft dict}, which is stored on disk instead of in RAM. One problem with this module is that the file is not locked when accessed. If two processes try to access it concurrently, the data become corrupted. This module also does not provide transactional safety.
-
-The proper alternative consists of using a database. There are two types of databases: relational databases (which normally use SQL syntax) and non-relational databases (often referred to as NoSQL). Key-value persistent storage databases usually follow under the latter category. Relational databases excel at storing structured data (in the form of tables), establishing relations between rows of those tables, and searches involving multiple tables linked by references. NoSQL databases excel at storing and retrieving schemaless data and replication of data (redundancy for fail safety).
-
-Python comes with an embedded SQL database called SQLite~\cite{sqlite}. All data in the database are stored in one single file. It supports the SQL query language and transactional safety. It is very fast and allows concurrent read (from multiple processes), although not concurrent write (the file is locked when a process is writing to the file until the transaction is committed). Concurrent write requests are queued and executed in order when the database is unlocked.
-
-Installing and using any of these database systems is beyond the scope of this book and not necessary for our purposes. In particular, we are not concerned with relations, data replications, and speed.
-
-As an exercise, we are going to implement a new Python class called {\ft PersistentDictionary} that exposes an interface similar to a {\ft dict} but uses the SQLite database for storage. The database file is created if it does not exist. {\ft PersistentDictionary} will use a single table (also called {\ft persistence}) to store rows containing a key ({\ft pkey}) and a value  ({\ft pvalue}).
-
-For later convenience, we will also add a method that can generate a UUID key. A UUID is a random string that is long enough to be, most likely, unique. This means that two calls to the same function will return different values, and the probability that the two values will be the same is negligible. Python includes a library to generate UUID strings based on a common industry standard. We use the function uuid4, which also uses the time and the IP of the machine to generate the UUID. This means the UUID is unlikely to have conflicts with (be equal to) another UUID generated on other machines. The {\ft uuid} method will be useful to generate random unique keys.
-
-We will also add a method that allows us to search for keys in the database using GLOB patterns (in a GLOB pattern, `` * '' represents a generic wildcard and ``?'' is a single-character wildcard).
-
-Here is the code:
-
-\index{class!PeristentDictionary}
-
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-import os
-import uuid
-import sqlite3
-import pickle
-import unittest
-
-class PersistentDictionary(object):
-    """
-    A sqlite based key, value storage.
-    The value can be any pickleable object.
-    Similar interface to Python dict
-    Supports the GLOB syntax in methods keys(), items(), __delitem__()
-
-    Usage Example:
-    >>> p = PersistentDictionary(path="test.sqlite")
-    >>> key = "test/" + p.uuid()
-    >>> p[key] = {"a": 1, "b": 2}
-    >>> p[key]
-    {'a': 1, 'b': 2}
-    >>> len(p.keys("test/*"))
-    1
-    >>> del p[key]
-    """
-
-    CREATE_TABLE = "CREATE TABLE persistence (pkey, pvalue)"
-    SELECT_KEYS = "SELECT pkey FROM persistence WHERE pkey GLOB ?"
-    SELECT_VALUE = "SELECT pvalue FROM persistence WHERE pkey GLOB ?"
-    INSERT_KEY_VALUE = "INSERT INTO persistence(pkey, pvalue) VALUES (?, ?)"
-    UPDATE_KEY_VALUE = "UPDATE persistence SET pvalue = ? WHERE pkey = ?"
-    DELETE_KEY_VALUE = "DELETE FROM persistence WHERE pkey LIKE ?"
-    SELECT_KEY_VALUE = "SELECT pkey, pvalue FROM persistence WHERE pkey GLOB ?"
-
-    def __init__(self, 
-                 path="persistence.sqlite", 
-                 autocommit=True, 
-                 serializer=pickle):
-        self.path = path
-        self.autocommit = autocommit
-        self.serializer = serializer
-        create_table = not os.path.exists(path)
-        self.connection = sqlite3.connect(path)
-        self.connection.text_factory = str  # do not use unicode
-        self.cursor = self.connection.cursor()
-        if create_table:
-            self.cursor.execute(self.CREATE_TABLE)
-            self.connection.commit()
-
-    def uuid(self):
-        return str(uuid.uuid4())
-
-    def keys(self, pattern=" * "):
-        "returns a list of keys filtered by a pattern, * is the wildcard"
-        self.cursor.execute(self.SELECT_KEYS, (pattern,))
-        return [row[0] for row in self.cursor.fetchall()]
-
-    def __contains__(self, key):
-        return True if self.get(key)!=None else False
-
-    def __iter__(self):
-        for key in self:
-            yield key
-
-    def __setitem__(self, key, value):
-        if key in self:
-            if value is None:
-                del self[key]
-            else:
-                svalue = self.serializer.dumps(value)
-                self.cursor.execute(self.UPDATE_KEY_VALUE, (svalue, key))
-        else:
-            svalue = self.serializer.dumps(value)
-            self.cursor.execute(self.INSERT_KEY_VALUE, (key, svalue))
-        if self.autocommit: self.connection.commit()
-
-    def get(self, key):
-        self.cursor.execute(self.SELECT_VALUE, (key,))
-        row = self.cursor.fetchone()
-        return self.serializer.loads(row[0]) if row else None
-
-    def __getitem__(self, key):
-        self.cursor.execute(self.SELECT_VALUE, (key,))
-        row = self.cursor.fetchone()
-        if not row: raise KeyError
-        return self.serializer.loads(row[0])
-
-    def __delitem__(self, pattern):
-        self.cursor.execute(self.DELETE_KEY_VALUE, (pattern,))
-        if self.autocommit: self.connection.commit()
-
-    def items(self, pattern=" * "):
-        self.cursor.execute(self.SELECT_KEY_VALUE, (pattern,))
-        return [(row[0], self.serializer.loads(row[1])) \
-                    for row in self.cursor.fetchall()]
-
-    def dumps(self, pattern=" * "):
-        self.cursor.execute(self.SELECT_KEY_VALUE, (pattern,))
-        rows = self.cursor.fetchall()
-        return self.serializer.dumps(dict((row[0], self.serializer.loads(row[1])) 
-                                          for row in rows))
-            
-    def loads(self, raw):
-        data = self.serializer.loads(raw)
-        for key, value in data.iteritems():
-            self[key] = value
-\end{lstlisting}
-
-This code now allows us to do the following:
-\begin{itemize}
-\item Create a persistent dictionary:
 \begin{lstlisting}
->>> p = PersistentDictionary(path="storage.sqlite", autocommit=False)
+import nlib
+echo square(3.0)
 \end{lstlisting}
-\item Store data in it:
+
+\goodbreak\subsection{The standard library}
+
+The standard library lives under the {\ft std/} prefix. The modules used in the rest of this book are:
+
+\begin{tabular}{|l|l|}\hline
+{\ft std/math}        & {\ft sin}, {\ft cos}, {\ft sqrt}, {\ft exp}, {\ft ln}, {\ft pow}, {\ft PI} \\ \hline
+{\ft std/random}      & {\ft rand}, {\ft randomize}, {\ft sample}, {\ft gauss}, {\ft shuffle} \\ \hline
+{\ft std/sequtils}    & {\ft mapIt}, {\ft filterIt}, {\ft toSeq}, {\ft newSeqWith} \\ \hline
+{\ft std/algorithm}   & {\ft sort}, {\ft reverse}, {\ft binarySearch} \\ \hline
+{\ft std/tables}      & {\ft Table}, {\ft initTable}, {\ft OrderedTable} \\ \hline
+{\ft std/sets}        & {\ft HashSet}, {\ft incl}, {\ft excl} \\ \hline
+{\ft std/options}     & {\ft Option[T]}, {\ft some}, {\ft none}, {\ft isSome} \\ \hline
+{\ft std/strutils}    & {\ft formatFloat}, {\ft split}, {\ft startsWith} \\ \hline
+{\ft std/strformat}   & {\ft \&""} string interpolation \\ \hline
+{\ft std/heapqueue}   & min-heap priority queue \\ \hline
+{\ft std/deques}      & double-ended queue \\ \hline
+{\ft std/json}        & JSON parsing and generation \\ \hline
+{\ft std/db\_sqlite}  & SQLite client \\ \hline
+{\ft std/times}       & {\ft epochTime}, {\ft now} \\ \hline
+{\ft std/threadpool}  & {\ft spawn}, {\ft sync}, {\ft Channel} \\ \hline
+\end{tabular}
+
+\goodbreak\section{Exceptions}
+
+\index{exceptions}\index{try}\index{except}
+
+Errors are raised with {\ft raise newException(ErrorType, "message")} and caught with {\ft try}/{\ft except}/{\ft finally}.
+
 \begin{lstlisting}
->>> p["some/key"] = "some value"
+proc safeDiv(a, b: float): float =
+  if b == 0:
+    raise newException(DivByZeroDefect, "division by zero")
+  a / b
+
+try:
+  echo safeDiv(1.0, 0.0)
+except DivByZeroDefect:
+  echo "caught a division by zero"
+except CatchableError as e:
+  echo "other error: ", e.msg
+finally:
+  echo "always runs"
 \end{lstlisting}
-where ``some/key'' must be a string and ``some value'' can be any Python pickleable object.
-\item Generate a UUID to be used as the key:
+
+The most commonly used exception types in this book are {\ft ArithmeticDefect} (numerical algorithms that fail to converge), {\ft IOError}, {\ft ValueError}, {\ft IndexDefect}, and {\ft CatchableError} as a catch-all for recoverable errors.
+
+\goodbreak\section{Files and persistence}
+
+\goodbreak\subsection{Reading and writing files}
+
 \begin{lstlisting}
->>> key = p.uuid()
->>> p[key] = "some other value"
+writeFile("hello.txt", "Hello, world!\n")
+let content = readFile("hello.txt")
+echo content
 \end{lstlisting}
-\item Retrieve the data:
+
+\goodbreak\subsection{A persistent dictionary on top of SQLite}
+
+Several examples in later chapters use a dictionary that survives between program runs. We can build a minimal one on top of {\ft std/db\_sqlite}: each key/value is a row in a table, with values serialized as JSON.
+
+\index{class!PersistentDictionary}
+
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+import std/[db_sqlite, json]
+
+type
+  PersistentDictionary* = ref object
+    db*: DbConn
+
+proc newPersistentDictionary*(path: string): PersistentDictionary =
+  result = PersistentDictionary(db: open(path, "", "", ""))
+  result.db.exec(sql"""
+    CREATE TABLE IF NOT EXISTS storage (
+      key   TEXT PRIMARY KEY,
+      value TEXT
+    )""")
+
+proc `[]=`*(p: PersistentDictionary, key: string, value: JsonNode) =
+  p.db.exec(sql"INSERT OR REPLACE INTO storage VALUES (?, ?)",
+            key, $value)
+
+proc `[]`*(p: PersistentDictionary, key: string): JsonNode =
+  let row = p.db.getRow(
+              sql"SELECT value FROM storage WHERE key = ?", key)
+  if row[0].len == 0: nil else: parseJson(row[0])
+
+proc contains*(p: PersistentDictionary, key: string): bool =
+  let row = p.db.getRow(
+              sql"SELECT 1 FROM storage WHERE key = ?", key)
+  row[0].len > 0
+\end{lstlisting}
+
+Usage:
+
 \begin{lstlisting}
->>> data = p["some/key"]
+let storage = newPersistentDictionary("memo.sqlite")
+storage["pi"] = %3.141592653589793
+echo storage["pi"].getFloat
 \end{lstlisting}
-\item Loop over keys:
+
+The {\ft \%} prefix and {\ft \%*} macro from {\ft std/json} convert any Nim value to a {\ft JsonNode}; {\ft .getFloat}, {\ft .getStr}, {\ft .getInt}, etc., extract the typed payload back. Together they give us a key-value store usable from any chapter that needs cross-run state (e.g., the memoization examples in chapter 3 and the stock-data examples in chapter 4).
+
+\goodbreak\section{Plotting via {\ft nimpy}}
+
+\index{nimpy}\index{matplotlib}
+
+Nim does not ship with a plotting library, but the {\ft nimpy} package gives full access to Python from a Nim program. We use it to drive {\ft matplotlib}~\cite{matplotlib}; this is also the strategy that lets us reuse Python tools (BioPython, NumPy, etc.) when needed even though the algorithms in this book are written in Nim.
+
+Install Nim with the {\ft choosenim} installer, then add {\ft nimpy} with {\ft nimble}:
+
 \begin{lstlisting}
->>> for key in p: print(key, p[key])
+nimble install nimpy
 \end{lstlisting}
-\item List all keys:
+
+A simple plot:
+
 \begin{lstlisting}
->>> keys = p.keys()
+import nimpy
+let plt = pyImport("matplotlib.pyplot")
+let xs = @[0.0, 1.0, 2.0, 3.0]
+let ys = @[0.0, 1.0, 4.0, 9.0]
+discard plt.plot(xs, ys, label = "y = x^2")
+discard plt.legend()
+discard plt.savefig("parabola.png")
 \end{lstlisting}
-\item List all keys matching a pattern:
+
+The {\ft discard} keyword tells Nim to ignore the value returned by {\ft plt.plot} (a Python {\ft Line2D} we are not using). Throughout the book we wrap such calls in helper procedures so the imperative {\ft pyplot} API does not leak into the algorithmic code.
+
+\goodbreak\section{Putting it together}
+
+The remaining chapters build a single library, {\ft nlib.nim}, by accumulating procedures, types, and methods following the patterns introduced in this chapter. Listings tagged
+
+\begin{quote}
+{\ft \textbackslash begin\{lstlisting\}[caption=\{in file: \{\textbackslash ft nlib.nim\}\}]}
+\end{quote}
+
+are appended to {\ft nlib.nim}; other listings live in their own files (named in the caption) or are inline examples meant to be typed at the REPL or compiled into a small program. To run an example, save it to a file and compile with
+
 \begin{lstlisting}
->>> keys = p.keys("some/ * ")
+nim c -d:release --threads:on example.nim
+./example
 \end{lstlisting}
-\item List all key-value pairs matching a pattern:
-\begin{lstlisting}
->>> for key, value in p.items("some/ * "): print(key, value)
-\end{lstlisting}
-\item Delete keys matching a pattern:
-\begin{lstlisting}
->>> del p["some/ * "]
-\end{lstlisting}
-\end{itemize}
-
-\goodbreak\subsection{{\ft matplotlib}}
-
-\index{matplotlib}\index{plot}\index{hist}\index{scatter}\index{color2d}
-
-Library {\ft matplotlib}~\cite{matplotlib} is the de facto standard plotting library for Python. It is one of the best and most versatile plotting libraries available. It has two modes of operation. One mode of operation, called {\ft pylab}, follows a Matlab-like syntax. The other mode follows a more Python-style syntax. Here we use the latter.
-
-You can install {\ft matplotlib} with
-\begin{lstlisting}
-pip install matplotlib
-\end{lstlisting}
-In {\ft matplotlib}, we need to distinguish the following objects:
-\begin{itemize}
-\item {\ft Figure}: a blank grid that can contain pairs of $XY$ axes
-\item {\ft Axes}: a pair of $XY$ axes that may contain multiple superimposed plots
-\item {\ft FigureCanvas}: a binary representation of a figure with everything that it contains
-\item {\ft plot}: a representation of a data set such as a line plot or a scatter plot
-\end{itemize}
-
-In {\ft matplotlib}, a canvas can be visualized in a window or serialized into an image file. Here we take the latter approach and create two helper functions that take data and configuration parameters and output PNG images.
-
-We start by importing {\ft matplotlib} and other required libraries:
-
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-import math
-import cmath
-import random
-import os
-import tempfile
-os.environ["MPLCONfigureDIR"] = tempfile.mkdtemp()
-\end{lstlisting}
-
-Now we define a helper that can plot lines, points with error bars, histograms, and scatter plots on a single canvas:
-
-\index{class!Canvas}
-
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-import io
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_agg import FigureCanvasAgg
-from matplotlib.patches import Ellipse
-
-class Canvas(object):
-
-    def __init__(self, title='', xlab="x", ylab="y", xrange=None, yrange=None):
-        self.fig = Figure()
-        self.fig.set_facecolor("white")
-        self.ax = self.fig.add_subplot(111)
-        self.ax.set_title(title)
-        self.ax.set_xlabel(xlab)
-        self.ax.set_ylabel(ylab)
-        if xrange:
-            self.ax.set_xlim(xrange)
-        if yrange:
-            self.ax.set_ylim(yrange)
-        self.legend = []
-
-    def save(self, filename="plot.png"):
-        if self.legend:
-            legend = self.ax.legend([e[0] for e in self.legend], 
-                                    [e[1] for e in self.legend])
-            legend.get_frame().set_alpha(0.7)
-        if filename:
-            FigureCanvasAgg(self.fig).print_png(open(filename, "wb"))
-        else:
-            s = io.StringIO()
-            FigureCanvasAgg(self.fig).print_png(s)
-            return s.getvalue()
-
-    def binary(self):
-        return self.save(None)
-
-    def hist(self, data, bins=20, color="blue", legend=None):
-        q = self.ax.hist(data, bins)
-        #if legend:
-         #    self.legend.append((q[0], legend))
-        return self
-
-    def plot(self, data, color="blue", style="-", width=2, 
-             legend=None, xrange=None):
-        if callable(data) and xrange:
-            x = [xrange[0]+0.01 * i * (xrange[1]-xrange[0]) for i in range(0, 101)]
-            y = [data(p) for p in x]
-        elif data and isinstance(data[0], (int, float)):
-            x, y = range(len(data)), data
-        else:
-            x, y = [p[0] for p in data], [p[1] for p in data]
-        q = self.ax.plot(x, y, linestyle=style, linewidth=width, color=color)
-        if legend:
-            self.legend.append((q[0], legend))
-        return self
-
-    def errorbar(self, data, color="black", marker="o", width=2, legend=None):
-        x, y, dy = [p[0] for p in data], [p[1] for p in data], [p[2] for p in data]
-        q = self.ax.errorbar(x, y, yerr=dy, fmt=marker, linewidth=width, color=color)
-        if legend:
-            self.legend.append((q[0], legend))
-        return self
-
-    def ellipses(self, data, color="blue", width=0.01, height=0.01, legend=None):
-        for point in data:
-            x, y = point[:2]
-            dx = point[2] if len(point)>2 else width
-            dy = point[3] if len(point)>3 else height
-            ellipse = Ellipse(xy=(x, y), width=dx, height=dy)
-            self.ax.add_artist(ellipse)
-            ellipse.set_clip_box(self.ax.bbox)
-            ellipse.set_alpha(0.5)
-            ellipse.set_facecolor(color)
-        if legend:
-            self.legend.append((q[0], legend))
-        return self
-
-    def imshow(self, data, interpolation="bilinear"):
-        self.ax.imshow(data).set_interpolation(interpolation)
-        return self
-\end{lstlisting}
-
-Notice we only make one set of {\ft axes}.
-
-The argument 111 of {\ft figure.add\_subplot(111)} indicates that we want a grid of $1\times 1$ axes, and we ask for the first one of them (the only one).
-
-The {\ft linesets} parameter is a list of dictionaries. Each dictionary must have a ``data'' key corresponding to a list of $(x, y)$ values. Each dictionary is rendered by a line connecting the points. It can have a ``label, '' a ``color, '' a ``style, '' and a ``width.''
-
-The {\ft pointsets} parameter is a list of dictionaries. Each dictionary must have a ``data'' key corresponding to a list of $(x, y, \delta y)$ values. Each dictionary is rendered by a set of circles with error bars. It can optionally have a ``label, '' a ``color, '' and a ``marker'' (symbol to replace the circle).
-
-The {\ft histsets} parameter is a list of dictionaries. Each dictionary must have a ``data'' key corresponding to a list of $x$ values. Each dictionary is rendered by histogram. Each dictionary can optionally have a ``label'' and a ``color.''
-
-The {\ft ellisets} parameter is also a list of dictionaries. Each dictionary must have a ``data'' key corresponding to a list of $(x, y, \delta x, \delta y)$ values. Each dictionary is rendered by a set of ellipses, one per point. It can optionally have a ``color.''
-
-We chose to draw all these types of plots with a single function because it is common to superimpose fitting lines to histograms, points, and scatter plots.
-
-As an example, we can plot a parabola $3 * x ** 2	-2 * x + 5$ in the interval [-3, 3] using 100 points.
-
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> parabola = lambda x: 3 * x ** 2 -2 * x + 5
->>> points = [(i * 3/50, parabola(i * 3/50)) for i in range(-50, 51)]
->>> Canvas(title="Parabola", xlab="x", ylab="y").plot(points).save("images/parabola.png")
-\end{lstlisting}
-
-\begin{figure}[ht]
-\centering\includegraphics[width=4in]{images/parabola.png}
-\caption{Example of a line plot.}
-\end{figure}
-
-Here is an example of a histogram of 1000 random gaussian points with mean 3 and standard deviation 5:
-
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> points = [random.gauss(3, 5) for d in range(1000)]
->>> Canvas(title="Gaussian", xlab="arithmetic return", ylab="frequency").hist(points).save("images/gaussian.png")
-\end{lstlisting}
-
-\begin{figure}[ht]
-\centering\includegraphics[width=4in]{images/gaussian.png}
-\caption{Example of a histogram plot. Distribution of daily arithmetic returns for the APPL stock in 2011 (source: Yahoo! Finance).}
-\end{figure}
-
-Here is a scatter plot for random data points:
-
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> from random import gauss
->>> points = [(gauss(0, 1), gauss(0, 1), gauss(0, 0.2), gauss(0, 0.2))
-...           for i in range(30)]
->>> Canvas(title="example scatter plot", xrange=(-2, 2), yrange=(-2, 2)
-...       ).ellipses(points).save("images/scatter.png")
-\end{lstlisting}
-
-\begin{figure}[ht]
-\centering\includegraphics[width=4in]{images/scatter.png}
-\caption{Example of a scatter plot using some random points.}
-\end{figure}
-
-Here is a scatter plot showing a spiral:
-
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> points = [(r/20 * math.cos(r/20), r/20 * math.sin(r/20), 1.0, 1.0)
-...           for r in range(1000)]
->>> Canvas(title="Spiral", xlab="x", ylab="y",
-...        xrange=(-50, 50), yrange=(-50, 50), 
-...        ).ellipses(points).save("images/spiral.png")
-\end{lstlisting}
-
-\begin{figure}[ht]
-\centering\includegraphics[width=4in]{images/spiral.png}
-\caption{Example of a scatter plot.}
-\end{figure}
-
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> def f(x, y): return (x-1) ** 2+(y-2) ** 2
->>> points = [[f(0.1 * i-3, 0.1 * j-3) for i in range(61)] for j in range(61)]
->>> Canvas(title="example 2d function").imshow(points).save("images/color2d.png")
-\end{lstlisting}
-
-\begin{figure}[ht]
-\centering\includegraphics[width=4in]{images/color2d.png}
-\caption{Example of a two-dimensional color plot using for $f(x, y)=(x-1)^2+(y-2)^2$.}
-\end{figure}
-
-The class {\ft Canvas} is both in {\ft nlib.py} and in the Python module {\ft canvas}~\cite{canvas}.
-
 
 \chapter{Theory of Algorithms}
 
@@ -13055,6 +11753,7 @@ $x^n\log x, n>0$ & $x^{n-1}(n\log x+1)$ \\ \hline
 
 \begin{thebibliography}{999}
 \bibitem{python} \url{http://www.python.org}
+\bibitem{nim} Andreas Rumpf and contributors, ``Nim Programming Language''. \url{https://nim-lang.org}
 \bibitem{pyopencl} Andreas Klöckner {\it et al} ``Pycuda and pyopencl: A scripting-based approach to gpu run-time code generation.'' Parallel Computing 38.3 (2012) pp 157-174
 \bibitem{guido} \url{http://www.network-theory.co.uk/docs/pytut/}
 \bibitem{lutz} \url{http://oreilly.com/catalog/9780596158071}
