@@ -1,3 +1,5 @@
+# this repo uses the https://github.com/unofficialtools/rigx build system
+
 [project]
 name    = "book-numerical"
 version = "0.1.0"
