@@ -1,4 +1,5 @@
 # this repo uses the https://github.com/unofficialtools/rigx build system
+# install with: uv tool install --force rigx 
 
 [project]
 name    = "book-numerical"
