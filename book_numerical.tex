@@ -8282,29 +8282,29 @@ Python has a module called {\ft random} that can generate random numbers, and we
 Let"s simulate a dice with six possible outcomes.
 We can use the frequentist definition:
 
-%%% META:FILE:test.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> import random
->>> S = [1, 2, 3, 4, 5, 6]
->>> def Prob(A, S, N=1000):
-...     return float(sum(random.choice(S) in A for i in range(N)))/N
->>> Prob([6], S)
-0.166
->>> Prob([1, 2], S)
-0.308
+\begin{lstlisting}
+import std/random
+randomize()
+let S = @[1, 2, 3, 4, 5, 6]
+
+proc Prob[T](A, S: seq[T], N = 1000): float =
+  var hits = 0
+  for _ in 0 ..< N:
+    if S[rand(S.len - 1)] in A: inc hits
+  hits / N
+
+echo Prob(@[6], S)        # 0.166
+echo Prob(@[1, 2], S)     # 0.308
 \end{lstlisting}
 Here {\ft \textrm{Prob}(A)} computes the probability that the event is set {\ft A} using {\ft N=1000} simulated experiments.
 The {\ft random.choice} function picks one of the choices at random with equal probability.
 
 We can compute the same quantity using the a priori definition:
 
-%%% META:FILE:test.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> def Prob(A, S): return float(len(A))/len(S)
->>> Prob([6], S)
-0.16666666666666666
->>> Prob([1, 2], S)
-0.3333333333333333
+\begin{lstlisting}
+proc Prob[T](A, S: seq[T]): float = float(A.len) / float(S.len)
+echo Prob(@[6], S)        # 0.16666666666666666
+echo Prob(@[1, 2], S)     # 0.3333333333333333
 \end{lstlisting}
 
 As stated before, the latter is more precise because it produces results for an ``ideal'' dice while the frequentist"s approach produces results for a real dice (in our case, a simulated dice).
@@ -8327,12 +8327,16 @@ We can experiment with conditional probability using Python. Let"s consider two 
 The space of all possible outcomes is given by $S^2 = S \times S$.
 And we are interested in the probability of the second die giving a $6$ given that the first dice is also a $6$:
 
-%%% META:FILE:test.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> def cross(u, v): return [(i, j) for i in u for j in v]
->>> def Prob_conditional(A, B, S): return Prob(cross(A, B), cross(S, S))/Prob(B, S)
->>> Prob_conditional([6], [6], S)
-0.16666666666666666
+\begin{lstlisting}
+proc cross[T](u, v: seq[T]): seq[(T, T)] =
+  for i in u:
+    for j in v:
+      result.add (i, j)
+
+proc probConditional[T](A, B, S: seq[T]): float =
+  Prob(cross(A, B), cross(S, S)) / Prob(B, S)
+
+echo probConditional(@[6], @[6], S)   # 0.16666666666666666
 \end{lstlisting}
 
 Because we are only considering cases in which the second die is 6, we will pretend that when the second die is 1 through 5 didn"t occur.
@@ -8381,26 +8385,31 @@ We call $E[(X-\mu _X)^2]$ the {\it variance} of $X$ and denote it with $\sigma _
 For discrete random variables, we can implement these definitions as follows:
 \index{mean}\index{variance}\index{standard deviation}
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def E(f, S): return float(sum(f(x) for x in S))/(len(S) or 1)
-def mean(X): return E(lambda x:x, X)
-def variance(X): return E(lambda x:x ** 2, X) - E(lambda x:x, X) ** 2
-def sd(X): return sqrt(variance(X))
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc E*(f: proc(x: float): float, S: seq[float]): float =
+  if S.len == 0: return 0.0
+  for x in S: result += f(x)
+  result /= float(S.len)
+
+proc mean*(X: seq[float]): float =
+  E(proc(x: float): float = x, X)
+
+proc variance*(X: seq[float]): float =
+  let mu = mean(X)
+  E(proc(x: float): float = (x - mu) ^ 2, X)
+
+proc sd*(X: seq[float]): float = sqrt(variance(X))
 \end{lstlisting}
 
 As an example, let"s consider a simple bet on a dice. We roll the dice once and win \$20 if the dice returns 6; we lose \$5 otherwise:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> S = [1, 2, 3, 4, 5, 6]
->>> mean(S)
-3.5
->>> sd(S)
-1.707...
->>> def payoff(x): return 20.0 if x == 6 else -5.0
->>> E(payoff, S)
--0.83333...
+\begin{lstlisting}
+let S = @[1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
+echo mean(S)            # 3.5
+echo sd(S)              # 1.707...
+proc payoff(x: float): float = (if x == 6.0: 20.0 else: -5.0)
+echo E(payoff, S)       # -0.83333...
 \end{lstlisting}
 
 The average expected payoff is $-0.83...$, which means that on average, we should expect to lose 83 cents at this game.
@@ -8496,13 +8505,14 @@ where $x_i$ are $N$ random points drawn from the uniform distribution $p$ define
 
 We can verify the preceding relation numerically for a special case:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> from math import sin, pi
->>> def integrate_mc(f, a, b, N=1000):
-...     return sum(f(random.uniform(a, b)) for i in range(N))/N * (b-a)
->>> integrate_mc(sin, 0, pi, N=10000)
-2.00....
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc integrateMc*(f: proc(x: float): float, a, b: float,
+                  N = 1000): float =
+  for _ in 0 ..< N: result += f(rand(b - a) + a)
+  result = result / float(N) * (b - a)
+
+echo integrateMc(sin, 0.0, PI, N = 10000)  # 2.00...
 \end{lstlisting}
 
 This is the simplest case of Monte Carlo integration, which is the subject of a following chapter.
@@ -8556,12 +8566,14 @@ E[(\sum_iX_i)^2] &=&\sum_iE[X_i^2]
 
 
 We can define covariance and correlation for discrete distributions:
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def covariance(X, Y):
-    return sum(X[i] * Y[i] for i in range(len(X)))/len(X) - mean(X) * mean(Y)
-def correlation(X, Y):
-    return covariance(X, Y)/sd(X)/sd(Y)
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc covariance*(X, Y: seq[float]): float =
+  for i in 0 ..< X.len: result += X[i] * Y[i]
+  result = result / float(X.len) - mean(X) * mean(Y)
+
+proc correlation*(X, Y: seq[float]): float =
+  covariance(X, Y) / sd(X) / sd(Y)
 \end{lstlisting}
 
 \goodbreak\subsection{Strong law of large numbers}
@@ -8589,18 +8601,23 @@ follows a Gaussian distribution with mean and variance:
 
 We can numerically verify this for the simple case in which $X_i$ are uniform random variables with mean equal to 0:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> def added_uniform(n): return sum([random.uniform(-1, 1) for i in range(n)])/n
->>> def make_set(n, m=10000): return [added_uniform(n) for j in range(m)]
->>> Canvas(title="Central Limit Theorem", xlab="y", ylab="p(y)"
-...       ).hist(make_set(1), legend="N=1").save("images/central1.png")
->>> Canvas(title="Central Limit Theorem", xlab="y", ylab="p(y)"
-...       ).hist(make_set(2), legend="N=2").save("images/central3.png")
->>> Canvas(title="Central Limit Theorem", xlab="y", ylab="p(y)"
-...       ).hist(make_set(4), legend="N=4").save("images/central4.png")
->>> Canvas(title="Central Limit Theorem", xlab="y", ylab="p(y)"
-...       ).hist(make_set(8), legend="N=8").save("images/central8.png")
+\begin{lstlisting}
+import nimpy
+let plt = pyImport("matplotlib.pyplot")
+
+proc addedUniform(n: int): float =
+  for _ in 0 ..< n: result += rand(2.0) - 1.0
+  result /= float(n)
+
+proc makeSet(n: int, m = 10000): seq[float] =
+  for _ in 0 ..< m: result.add addedUniform(n)
+
+for (n, name) in [(1, "central1.png"), (2, "central3.png"),
+                  (4, "central4.png"), (8, "central8.png")]:
+  discard plt.figure()
+  discard plt.title("Central Limit Theorem")
+  discard plt.hist(makeSet(n), label = "N=" & $n)
+  discard plt.savefig("images/" & name)
 \end{lstlisting}
 
 \begin{figure}[ht]
@@ -8738,18 +8755,27 @@ We have 52 cards, 26 black and 26 red. We shuffle the cards and pick three.
 
 Here is an example of how we can simulate the deck of cards using Python to compute an answer to the last questions:
 
-%%% META:FILE:tests.py
-\begin{lstlisting}[caption={in file: {\ft tests.py}}]
->>> def make_deck(): return [color for i in range(26) for color in ("red", "black")]
->>> def make_shuffled_deck(): return random.shuffle(make_deck())
->>> def pick_three_cards(): return make_shuffled_deck()[:3]
->>> def simulate_cards(n=1000):
-...     counter = 0
-...     for k in range(n):
-...         c = pick_three_cards()
-...         if not (c[0] == c[1] and c[1] == c[2]): counter += 1
-...     return float(counter)/n
->>> simulate_cards()
+\begin{lstlisting}
+proc makeDeck(): seq[string] =
+  for i in 0 ..< 26:
+    result.add "red"
+    result.add "black"
+
+proc makeShuffledDeck(): seq[string] =
+  result = makeDeck()
+  shuffle(result)
+
+proc pickThreeCards(): seq[string] = makeShuffledDeck()[0 ..< 3]
+
+proc simulateCards(n = 1000): float =
+  var counter = 0
+  for _ in 0 ..< n:
+    let c = pickThreeCards()
+    if not (c[0] == c[1] and c[1] == c[2]):
+      counter += 1
+  result = counter / n
+
+echo simulateCards()
 \end{lstlisting}
 
 \goodbreak\subsection{Gambler"s fallacy}
