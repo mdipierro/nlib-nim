@@ -4986,17 +4986,16 @@ Buckingham is a Python library that implements error propagation and unit conver
 Here is an example:
 
 \begin{lstlisting}
->>> from buckingham import * 
->>> globals().update(allunits())
->>> L = (4 + pm(0.5)) * meter
->>> v = 5 * meter/second
->>> t = L/v
->>> t)                                                                                               
-(8.00 +/- 1.00)/10
->>> t.units()
-second
->>> t.convert("hour")
-(2.222 +/- 0.278)/10^4
+import buckingham
+let L = (4.0 +/ 0.5) * meter
+let v = 5.0 * meter / second
+let t = L / v
+echo t
+# (8.00 +/- 1.00)/10
+echo t.units()
+# second
+echo t.convert("hour")
+# (2.222 +/- 0.278)/10^4
 \end{lstlisting}
 
 Notice how adding an uncertainty to a numeric value with {\ft +\\pm(...)} or adding units to a numeric value (integer or floating point) transforms the {\ft float} number into a {\ft Number} object. A {\ft Number} object behaves like a floating point but propagates its uncertainty and its units.  Internally, all units are converted to the International System, unless an explicit conversion is specified.
@@ -5028,10 +5027,12 @@ Consider a ball in a one-dimensional box of size $L$, and let $x$ be the positio
 Computing $\textrm{d}f(x)/\textrm{d}x$ analytically is only possible when the function $f$ is expressed in simple analytical terms. Computing it analytically is not possible when $f(x)$ is itself implemented as a numerical algorithm. Here is an example:
 
 \begin{lstlisting}
-def f(x):
-    (s, t) = (1.0, 1.0)
-    for i in range(1, 10): (s, t) = (s+t, t * x/i)
-    return s
+proc f(x: float): float =
+  var s = 1.0
+  var t = 1.0
+  for i in 1 ..< 10:
+    (s, t) = (s + t, t * x / float(i))
+  return s
 \end{lstlisting}
 
 What is the derivative of $f(x)$?
@@ -5074,10 +5075,10 @@ Notice that even more definitions are possible as long as they agree in the limi
 
 We can easily implement the concept of a numerical derivative in code by creating a {\it functional} $D$ that takes a function $f$ and returns the function $\frac{\textrm{d}f(x)}{\textrm{d}x}$ (a functional is a function that returns another function):
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def D(f, h=1e-6):  # first derivative of f
-    return lambda x, f=f, h=h: (f(x+h)-f(x-h))/2/h
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc D*(f: proc(x: float): float, h = 1e-6): proc(x: float): float =
+  result = proc(x: float): float = (f(x + h) - f(x - h)) / 2.0 / h
 \end{lstlisting}
 
 We can do the same with the second derivative:
@@ -5086,28 +5087,24 @@ We can do the same with the second derivative:
   \frac{\textrm{d}^2f(x)}{\textrm{d}x^2} = \frac{f(x+h)-2f(x)-f(x-h)}{h^2} + O(h)
 \end{equation}
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def DD(f, h=1e-6):  # second derivative of f
-    return lambda x, f=f, h=h: (f(x+h)-2.0 * f(x)+f(x-h))/(h * h)
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc DD*(f: proc(x: float): float, h = 1e-6): proc(x: float): float =
+  result = proc(x: float): float =
+    (f(x + h) - 2.0 * f(x) + f(x - h)) / (h * h)
 \end{lstlisting}
 
 Here is an example:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> def f(x): return x * x-5.0 * x
->>> f(0)
-0.0
->>> f1 = D(f)  # first derivative
->>> f1(0)
--5.0
->>> f2 = DD(f)  # second derivative
->>> f2(0)
-2.00000...
->>> f2 = D(f1)  # second derivative
->>> f2(0)
-1.99999...
+\begin{lstlisting}
+proc f(x: float): float = x * x - 5.0 * x
+echo f(0.0)            # 0.0
+let f1 = D(f)          # first derivative
+echo f1(0.0)           # -5.0
+let f2 = DD(f)         # second derivative
+echo f2(0.0)           # 2.00000...
+let f2b = D(f1)        # second derivative (composing)
+echo f2b(0.0)          # 1.99999...
 \end{lstlisting}
 
 Notice how composing the first derivative twice or computing the second derivative directly yields a similar result.
@@ -5121,20 +5118,21 @@ We could easily derive formulas for higher-order derivatives and implement them,
 Suppose we are interested in the values of $f(x)=\sin(x)$ for values of $x$ between $0$ and $0.1$:
 
 \begin{lstlisting}
->>> from math import sin
->>> points = [0.01 * i for i in range(0, 11)]
->>> for x in points:
-...     print(x, sin(x), "%.2f" % (abs(x-sin(x))/sin(x) * 100))
-0.01 0.009999833... 0.00
-0.02 0.019998666... 0.01
-0.03 0.029995500... 0.02
-0.04 0.039989334... 0.03
-0.05 0.049979169... 0.04
-0.06 0.059964006... 0.06
-0.07 0.069942847... 0.08
-0.08 0.079914693... 0.11
-0.09 0.089878549... 0.14
-0.1 0.0998334166... 0.17
+import std/math
+for i in 0 .. 10:
+  let x = 0.01 * float(i)
+  echo x, " ", sin(x), " ",
+       formatFloat(abs(x - sin(x)) / sin(x) * 100, ffDecimal, 2)
+# 0.01 0.009999833... 0.00
+# 0.02 0.019998666... 0.01
+# 0.03 0.029995500... 0.02
+# 0.04 0.039989334... 0.03
+# 0.05 0.049979169... 0.04
+# 0.06 0.059964006... 0.06
+# 0.07 0.069942847... 0.08
+# 0.08 0.079914693... 0.11
+# 0.09 0.089878549... 0.14
+# 0.1 0.0998334166... 0.17
 \end{lstlisting}
 Here the first column is the value of $x$, the second column is the corresponding $\sin(x)$, and the third column is the relative difference (in percent) between $x$ and $\sin(x)$. The difference is always less than $20\%$; therefore, if we are happy with this precision, then we can replace $\sin(x)$ with $x$.
 
@@ -5143,17 +5141,18 @@ This works because any function $f(x)$ can be expanded using a Taylor series. Th
 Expanding on the previous example, consider the following code:
 
 \begin{lstlisting}
->>> from math import sin
->>> points = [0.01 * i for i in range(0, 11)]
->>> for x in points:
-...     s = x - x * x * x/6
-...     print(x, math.sin(x), s, ``%.6f'' % (abs(s-sin(x))/(sin(x)) * 100))
-0.01 0.009999833... 0.009999... 0.000000
-0.02 0.019998666... 0.019998... 0.000000
-0.03 0.029995500... 0.029995... 0.000001
-0.04 0.039989334... 0.039989... 0.000002
-0.05 0.049979169... 0.049979... 0.000005
-0.06 0.059964006... 0.059964... 0.000011
+import std/math
+for i in 0 .. 10:
+  let x = 0.01 * float(i)
+  let s = x - x * x * x / 6.0
+  echo x, " ", sin(x), " ", s, " ",
+       formatFloat(abs(s - sin(x)) / sin(x) * 100, ffDecimal, 6)
+# 0.01 0.009999833... 0.009999... 0.000000
+# 0.02 0.019998666... 0.019998... 0.000000
+# 0.03 0.029995500... 0.029995... 0.000001
+# 0.04 0.039989334... 0.039989... 0.000002
+# 0.05 0.049979169... 0.049979... 0.000005
+# 0.06 0.059964006... 0.059964... 0.000011
 0.07 0.069942847... 0.069942... 0.000020
 0.08 0.079914693... 0.079914... 0.000034
 0.09 0.089878549... 0.089878... 0.000055
@@ -5216,10 +5215,15 @@ loop:
 For the $\sin$ function:
 
 \begin{lstlisting}
-def mysin(x):
-    (s, t) = (0.0, x)
-    for i in range(3, 10, 2): (s, t) = (s+t, -t * x * x/i/(i-1))
-    return s
+proc mysin(x: float): float =
+  var s = 0.0
+  var t = x
+  var i = 3
+  while i < 10:
+    s += t
+    t = -t * x * x / float(i) / float(i - 1)
+    i += 2
+  return s
 \end{lstlisting}
 
 Where do these formulas come from? How do we decide how many iterations we need? We address these problems in the next section.
@@ -5273,19 +5277,21 @@ sin(x) &=&  x - \frac1{3!}x^3 + ... + \frac{(-1)^n}{(2k+1)!}x^{(2k+1)} + ...
 
 We can show the effects of the various terms:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> X = [0.03 * i for i in range(200)]
->>> c = Canvas(title="sin(x) approximations")
->>> c.plot([(x, math.sin(x)) for x in X], legend="sin(x)")
-<...>
->>> c.plot([(x, x) for x in X[:100]], legend="Taylor 1st")
-<...>
->>> c.plot([(x, x-x ** 3/6) for x in X[:100]], legend="Taylor 5th")
-<...>
->>> c.plot([(x, x-x ** 3/6+x ** 5/120) for x in X[:100]], legend="Taylor 5th")
-<...>
->>> c.save("images/sin.png")
+\begin{lstlisting}
+import nimpy
+let plt = pyImport("matplotlib.pyplot")
+var X: seq[float] = @[]
+for i in 0 ..< 200: X.add 0.03 * float(i)
+discard plt.title("sin(x) approximations")
+discard plt.plot(X, X.mapIt(sin(it)), label = "sin(x)")
+discard plt.plot(X[0 ..< 100], X[0 ..< 100], label = "Taylor 1st")
+discard plt.plot(X[0 ..< 100],
+                 X[0 ..< 100].mapIt(it - it^3/6.0), label = "Taylor 3rd")
+discard plt.plot(X[0 ..< 100],
+                 X[0 ..< 100].mapIt(it - it^3/6.0 + it^5/120.0),
+                 label = "Taylor 5th")
+discard plt.legend()
+discard plt.savefig("images/sin.png")
 \end{lstlisting}
 
 \begin{figure}[ht]
@@ -5301,20 +5307,26 @@ sin(x) =  1 - \frac1{2}(x-\frac{\pi}{2})^2 + ... + \frac{(-1)^n}{(2k)!}(x-\frac{
 
 and a plot would show:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> a = math.pi/2
->>> X = [0.03 * i for i in range(200)]
->>> c = Canvas(title="sin(x) approximations")
->>> c.plot([(x, math.sin(x)) for x in X], legend="sin(x)")
-<...>
->>> c.plot([(x, 1-(x-a) ** 2/2) for x in X[:150]], legend="Taylor 2nd")
-<...>
->>> c.plot([(x, 1-(x-a) ** 2/2+(x-a) ** 4/24) for x in X[:150]], legend="Taylor 4th")
-<...>
->>> c.plot([(x, 1-(x-a) ** 2/2+(x-a) ** 4/24-(x-a) ** 6/720) for x in X[:150]], legend="Taylor 6th")
-<...>
->>> c.save("images/sin2.png")
+\begin{lstlisting}
+import nimpy
+let plt = pyImport("matplotlib.pyplot")
+let a = PI / 2.0
+var X: seq[float] = @[]
+for i in 0 ..< 200: X.add 0.03 * float(i)
+discard plt.title("sin(x) approximations")
+discard plt.plot(X, X.mapIt(sin(it)), label = "sin(x)")
+discard plt.plot(X[0 ..< 150],
+                 X[0 ..< 150].mapIt(1.0 - (it - a)^2/2.0),
+                 label = "Taylor 2nd")
+discard plt.plot(X[0 ..< 150],
+                 X[0 ..< 150].mapIt(1.0 - (it - a)^2/2.0 + (it - a)^4/24.0),
+                 label = "Taylor 4th")
+discard plt.plot(X[0 ..< 150],
+                 X[0 ..< 150].mapIt(1.0 - (it - a)^2/2.0 + (it - a)^4/24.0 -
+                                    (it - a)^6/720.0),
+                 label = "Taylor 6th")
+discard plt.legend()
+discard plt.savefig("images/sin2.png")
 \end{lstlisting}
 
 \begin{figure}[ht]
@@ -5347,20 +5359,20 @@ T_k(x) = \frac1{k!}x^n = \frac{x}{k} \frac1{(k-1)!}x^{k-1} = \frac{x}{k} T_{k-1}
 
 For $x<0$, the terms in the sign have alternating sign and are decreasing in magnitude; therefore, for $x<0$, $R_k<T_{k+1}(1)$. This allows for an easy implementation of the Taylor expansion and its stopping condition:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def myexp(x, precision=1e-6, max_steps=40):
-    if x == 0:
-       return 1.0
-    elif x>0:
-       return 1.0/myexp(-x, precision, max_steps)
-    else:
-       t = s = 1.0  # first term
-       for k in range(1, max_steps):
-           t = t * x/k    # next term
-           s = s + t    # add next term
-           if abs(t)<precision: return s
-       raise ArithmeticError("no convergence")
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc myexp*(x: float, precision = 1e-6, maxSteps = 40): float =
+  if x == 0:
+    return 1.0
+  if x > 0:
+    return 1.0 / myexp(-x, precision, maxSteps)
+  var t = 1.0
+  var s = 1.0
+  for k in 1 ..< maxSteps:
+    t = t * x / float(k)
+    s = s + t
+    if abs(t) < precision: return s
+  raise newException(ArithmeticDefect, "no convergence")
 \end{lstlisting}
 
 This code presents all the features of many of the algorithms we see later in the chapter:
@@ -5375,11 +5387,10 @@ This code presents all the features of many of the algorithms we see later in th
 
 Here is a test of its convergence:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> for i in range(10):
-...     x= 0.1 * i
-...     assert abs(myexp(x) - math.exp(x)) < 1e-4
+\begin{lstlisting}
+for i in 0 ..< 10:
+  let x = 0.1 * float(i)
+  doAssert abs(myexp(x) - exp(x)) < 1e-4
 \end{lstlisting}
 
 We can do the same for the $\sin$ function:
@@ -5397,75 +5408,71 @@ Also notice that the stopping condition is only true when $0\leq x<1$. Therefore
 
 Hence we write:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def mysin(x, precision=1e-6, max_steps=40):
-    pi = math.pi
-    if x == 0:
-       return 0
-    elif x<0:
-       return -mysin(-x)
-    elif x>2.0 * pi:
-       return mysin(x % (2.0 * pi))
-    elif x>pi:
-       return -mysin(2.0 * pi - x)
-    elif x>pi/2:
-       return mysin(pi-x)
-    elif x>pi/4:
-       return sqrt(1.0-mysin(pi/2-x) ** 2)
-    else:
-       t = s = x                                     # first term
-       for k in range(1, max_steps):
-           t = t * (-1.0) * x * x/(2 * k)/(2 * k+1)  # next term
-           s = s + t                                 # add next term
-           r = x ** (2 * k+1)                        # estimate residue
-           if r<precision: return s                  # stopping condition
-       raise ArithmeticError("no convergence")
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc mysin*(x: float, precision = 1e-6, maxSteps = 40): float =
+  if x == 0:
+    return 0
+  if x < 0:
+    return -mysin(-x, precision, maxSteps)
+  if x > 2.0 * PI:
+    return mysin(x mod (2.0 * PI), precision, maxSteps)
+  if x > PI:
+    return -mysin(2.0 * PI - x, precision, maxSteps)
+  if x > PI / 2:
+    return mysin(PI - x, precision, maxSteps)
+  if x > PI / 4:
+    return sqrt(1.0 - mysin(PI / 2 - x, precision, maxSteps) ^ 2)
+  var t = x
+  var s = x
+  for k in 1 ..< maxSteps:
+    t = t * (-1.0) * x * x / float(2 * k) / float(2 * k + 1)
+    s = s + t
+    let r = x ^ (2 * k + 1)
+    if r < precision: return s
+  raise newException(ArithmeticDefect, "no convergence")
 \end{lstlisting}
 
 Here we test it:
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> for i in range(10):
-...     x= 0.1 * i
-...     assert abs(mysin(x) - math.sin(x)) < 1e-4
+\begin{lstlisting}
+for i in 0 ..< 10:
+  let x = 0.1 * float(i)
+  doAssert abs(mysin(x) - sin(x)) < 1e-4
 \end{lstlisting}
 
 Finally, we can do the same for the $\cos$ function:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def mycos(x, precision=1e-6, max_steps=40):
-    pi = math.pi
-    if x == 0:
-       return 1.0
-    elif x<0:
-       return mycos(-x)
-    elif x>2.0 * pi:
-       return mycos(x % (2.0 * pi))
-    elif x>pi:
-       return mycos(2.0 * pi - x)
-    elif x>pi/2:
-       return -mycos(pi-x)
-    elif x>pi/4:
-       return sqrt(1.0-mycos(pi/2-x) ** 2)
-    else:
-       t = s = 1                      # first term
-       for k in range(1, max_steps):
-           t = t * (-1.0) * x * x/(2 * k)/(2 * k-1)    # next term
-           s = s + t                  # add next term
-           r = x ** (2 * k)               # estimate residue
-           if r<precision: return s   # stopping condition
-       raise ArithmeticError("no convergence")
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc mycos*(x: float, precision = 1e-6, maxSteps = 40): float =
+  if x == 0:
+    return 1.0
+  if x < 0:
+    return mycos(-x, precision, maxSteps)
+  if x > 2.0 * PI:
+    return mycos(x mod (2.0 * PI), precision, maxSteps)
+  if x > PI:
+    return mycos(2.0 * PI - x, precision, maxSteps)
+  if x > PI / 2:
+    return -mycos(PI - x, precision, maxSteps)
+  if x > PI / 4:
+    return sqrt(1.0 - mycos(PI / 2 - x, precision, maxSteps) ^ 2)
+  var t = 1.0
+  var s = 1.0
+  for k in 1 ..< maxSteps:
+    t = t * (-1.0) * x * x / float(2 * k) / float(2 * k - 1)
+    s = s + t
+    let r = x ^ (2 * k)
+    if r < precision: return s
+  raise newException(ArithmeticDefect, "no convergence")
 \end{lstlisting}
 
 Here is a test of convergence:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> for i in range(10):
-...     x = 0.1 * i
-...     assert abs(mycos(x) - math.cos(x)) < 1e-4
+\begin{lstlisting}
+for i in 0 ..< 10:
+  let x = 0.1 * float(i)
+  doAssert abs(mycos(x) - cos(x)) < 1e-4
 \end{lstlisting}
 
 \goodbreak\subsection{Stopping Conditions}
@@ -5499,14 +5506,14 @@ loop:
 In the code, we use the computed {\ft result} as an estimate of the [true value] and, occasionally, the computed {\ft correction} is an estimate of the [absolute error]. The target absolute precision is an input value that we use as an upper limit for the absolute error. The target relative precision is an input value we use as an upper limit for the relative error. When absolute error falls below the target absolute precision or the relative error falls below the target relative precision, we stop looping and assume the result is sufficiently precise:
 
 \begin{lstlisting}
-def generic_looping_function(guess, ap, rp, ns):
-    result = guess
-    for k in range(ns):
-        correction = ...
-        result = result+correction
-        remainder = ...
-        if norm(remainder) < max(ap, norm(result) * rp): return result
-    raise ArithmeticError("no convergence")
+proc genericLoopingFunction(guess: float, ap, rp: float, ns: int): float =
+  result = guess
+  for k in 0 ..< ns:
+    let correction = ...   # compute correction
+    result = result + correction
+    let remainder = ...    # compute remainder
+    if norm(remainder) < max(ap, norm(result) * rp): return result
+  raise newException(ArithmeticDefect, "no convergence")
 \end{lstlisting}
 
 In the preceding code, 
@@ -5602,7 +5609,7 @@ As a corollary of the basic properties of a linear system discussed earlier, lin
 We will implement them in code using Python.
 In Python, we can implement a matrix as a list of lists, as follows:
 \begin{lstlisting}
->>> A = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+let a = @[@[1, 2, 3], @[4, 5, 6], @[7, 8, 9]]
 \end{lstlisting}
 But such an object (a list of lists) does not have the mathematical properties we want, so we have to define them.
 
@@ -5610,34 +5617,38 @@ First, we define a class representing a matrix:
 
 \index{class!Matrix}
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-class Matrix(object):
-    def __init__(self, rows, cols=1, fill=0.0):
-        """
-        Constructor a zero matrix
-        Examples:
-        A = Matrix([[1, 2], [3, 4]])
-        A = Matrix([1, 2, 3, 4])
-        A = Matrix(10, 20)
-        A = Matrix(10, 20, fill=0.0)
-        A = Matrix(10, 20, fill=lambda r, c: 1.0 if r == c else 0.0)
-        """
-        if isinstance(rows, list):
-            if isinstance(rows[0], list):
-                self.rows = [[e for e in row] for row in rows]
-            else:
-                self.rows = [[e] for e in rows]
-        elif isinstance(rows, int) and isinstance(cols, int):
-            xrows, xcols = range(rows), range(cols)
-            if callable(fill):
-                self.rows = [[fill(r, c) for c in xcols] for r in xrows]
-            else:
-                self.rows = [[fill for c in xcols] for r in xrows]
-        else:
-            raise RuntimeError("Unable to build matrix from %s" % repr(rows))
-        self.nrows = len(self.rows)
-        self.ncols = len(self.rows[0])
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+type
+  Matrix* = ref object
+    nrows*, ncols*: int
+    data*: seq[float]    # row-major
+
+proc newMatrix*(rows: int, cols = 1, fill = 0.0): Matrix =
+  ## A `rows x cols` matrix filled with `fill`.
+  Matrix(nrows: rows, ncols: cols,
+         data: newSeqWith(rows * cols, fill))
+
+proc newMatrix*(rows, cols: int, fill: proc(r, c: int): float): Matrix =
+  ## A `rows x cols` matrix where element (r, c) is `fill(r, c)`.
+  result = Matrix(nrows: rows, ncols: cols,
+                  data: newSeq[float](rows * cols))
+  for r in 0 ..< rows:
+    for c in 0 ..< cols:
+      result.data[r * cols + c] = fill(r, c)
+
+proc newMatrix*(rows: seq[seq[float]]): Matrix =
+  ## Build from a list of rows.
+  let n = rows.len
+  let m = rows[0].len
+  result = newMatrix(n, m)
+  for r in 0 ..< n:
+    for c in 0 ..< m:
+      result.data[r * m + c] = rows[r][c]
+
+proc newMatrix*(values: seq[float]): Matrix =
+  ## Build a column vector from a flat list.
+  newMatrix(values.len, 1, proc(r, c: int): float = values[r])
 \end{lstlisting}
 
 Notice that the constructor takes the number of rows and columns (cols) of the matrix but also a {\ft fill} value, which can be used to initialize the matrix elements and defaults to zero. It can be callable in case we need to initialize the matrix with row, col dependent values.
@@ -5647,191 +5658,144 @@ The actual matrix elements are stored as a list or array into the {\ft data} mem
 Now we define a getter method, a setter method, and a string representation for the matrix elements:
 \index{\_\_getitem\_\_}\index{\_\_setitem\_\_}
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-    def __getitem__(A, coords):
-        " x = A[0, 1]"
-        i, j = coords
-        return A.rows[i][j]
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc `[]`*(a: Matrix, i, j: int): float =
+  ## `x = a[i, j]`
+  a.data[i * a.ncols + j]
 
-    def __setitem__(A, coords, value):
-        " A[0, 1] = 3.0 "
-        i, j = coords
-        A.rows[i][j] = value
+proc `[]=`*(a: Matrix, i, j: int, value: float) =
+  ## `a[i, j] = value`
+  a.data[i * a.ncols + j] = value
 
-    def tolist(A):
-        " assert(Matrix([[1, 2], [3, 4]]).tolist() == [[1, 2], [3, 4]]) "
-        return A.rows
+proc tolist*(a: Matrix): seq[seq[float]] =
+  for r in 0 ..< a.nrows:
+    var row = newSeq[float](a.ncols)
+    for c in 0 ..< a.ncols: row[c] = a[r, c]
+    result.add row
 
-    def __str__(A):
-        return str(A.rows)
+proc `$`*(a: Matrix): string = $a.tolist()
 
-    def flatten(A):
-        " assert(Matrix([[1, 2], [3, 4]]).flatten() == [1, 2, 3, 4]) "
-        return [A[r, c] for r in range(A.nrows) for c in range(A.ncols)]
+proc flatten*(a: Matrix): seq[float] = a.data
 
-    def reshape(A, n, m):
-        " assert(Matrix([[1, 2], [3, 4]]).reshape(1, 4).tolist() == [[1, 2, 3, 4]]) "
-        if n * m != A.nrows * A.ncols:
-             raise RuntimeError("Impossible reshape")
-        flat = A.flatten()
-        return Matrix(n, m, fill=lambda r, c, m=m, flat=flat: flat[r * m+c])
+proc reshape*(a: Matrix, n, m: int): Matrix =
+  if n * m != a.nrows * a.ncols:
+    raise newException(ValueError, "Impossible reshape")
+  let flat = a.data
+  newMatrix(n, m, proc(r, c: int): float = flat[r * m + c])
 
-    def swap_rows(A, i, j):
-        " assert(Matrix([[1, 2], [3, 4]]).swap_rows(1, 0).tolist() == [[3, 4], [1, 2]]) "
-        A.rows[i], A.rows[j] = A.rows[j], A.rows[i]
+proc swapRows*(a: Matrix, i, j: int) =
+  for c in 0 ..< a.ncols:
+    swap(a.data[i * a.ncols + c], a.data[j * a.ncols + c])
 \end{lstlisting}
 
 \index{matrix!identity}\index{matrix!diagonal}
 
 We also define some convenience functions for constructing the identity matrix (given its size) and a diagonal matrix (given the diagonal elements). We make these methods static because they do not act on an existing matrix.
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-    @staticmethod
-    def identity(rows=1, e=1.0):
-        return Matrix(rows, rows, lambda r, c, e=e: e if r == c else 0.0)
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc identity*(rows = 1, e = 1.0): Matrix =
+  newMatrix(rows, rows,
+    proc(r, c: int): float = (if r == c: e else: 0.0))
 
-    @staticmethod
-    def diagonal(d):
-        return Matrix(len(d), len(d), lambda r, c, d=d:d[r] if r == c else 0.0)
+proc diagonal*(d: seq[float]): Matrix =
+  newMatrix(d.len, d.len,
+    proc(r, c: int): float = (if r == c: d[r] else: 0.0))
 \end{lstlisting}
 
 Now we are ready to define arithmetic operations among matrices. We start with addition and subtraction:
 
 \index{matrix!addition}\index{matrix!subtraction}
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-    def __add__(A, B):
-        """
-        Adds A and B element by element, A and B must have the same size
-        Example
-        >>> A = Matrix([[4, 3.0], [2, 1.0]])
-        >>> B = Matrix([[1, 2.0], [3, 4.0]])
-        >>> C = A + B
-        >>> print(C)
-        [[5, 5.0], [5, 5.0]]
-        """
-        n, m = A.nrows, A.ncols
-        if not isinstance(B, Matrix):
-            if n == m:
-                B = Matrix.identity(n, B)
-            elif n == 1 or m == 1:
-                B = Matrix([[B for c in range(m)] for r in range(n)])
-        if B.nrows!=n or B.ncols!=m:
-            raise ArithmeticError("incompatible dimensions")
-        C = Matrix(n, m)
-        for r in range(n):
-            for c in range(m):
-                C[r, c] = A[r, c]+B[r, c]
-        return C
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc `+`*(a, b: Matrix): Matrix =
+  ## Element-wise addition. Dimensions must match.
+  if a.nrows != b.nrows or a.ncols != b.ncols:
+    raise newException(ArithmeticDefect, "incompatible dimensions")
+  result = newMatrix(a.nrows, a.ncols)
+  for i in 0 ..< a.data.len:
+    result.data[i] = a.data[i] + b.data[i]
 
-    def __sub__(A, B):
-        """
-        Adds A and B element by element, A and B must have the same size
-        Example
-        >>> A = Matrix([[4.0, 3.0], [2.0, 1.0]])
-        >>> B = Matrix([[1.0, 2.0], [3.0, 4.0]])
-        >>> C = A - B
-        >>> print(C)
-        [[3.0, 1.0], [-1.0, -3.0]]
-        """
-        n, m = A.nrows, A.ncols
-        if not isinstance(B, Matrix):
-            if n == m:
-                B = Matrix.identity(n, B)
-            elif n == 1 or m == 1:
-                B = Matrix(n, m, fill=B)
-        if B.nrows!=n or B.ncols!=m:
-            raise ArithmeticError("Incompatible dimensions")
-        C = Matrix(n, m)
-        for r in range(n):
-            for c in range(m):
-                C[r, c] = A[r, c]-B[r, c]
-        return C
-    def __radd__(A, B): #B+A
-        return A+B
-    def __rsub__(A, B): #B-A
-        return (-A)+B
-    def __neg__(A):
-        return Matrix(A.nrows, A.ncols, fill=lambda r, c:-A[r, c])
+proc `+`*(a: Matrix, x: float): Matrix =
+  ## `a + x`: scalar `x` is treated as `x * I` for square `a`,
+  ## or as a constant column for column vectors.
+  if a.nrows == a.ncols:
+    return a + identity(a.nrows, x)
+  if a.nrows == 1 or a.ncols == 1:
+    return a + newMatrix(a.nrows, a.ncols, x)
+  raise newException(ArithmeticDefect, "incompatible dimensions")
+
+proc `+`*(x: float, a: Matrix): Matrix = a + x
+
+proc `-`*(a: Matrix): Matrix =
+  newMatrix(a.nrows, a.ncols,
+    proc(r, c: int): float = -a[r, c])
+
+proc `-`*(a, b: Matrix): Matrix = a + (-b)
+
+proc `-`*(a: Matrix, x: float): Matrix = a + (-x)
+
+proc `-`*(x: float, a: Matrix): Matrix = (-a) + x
 \end{lstlisting}
 With the preceding definitions, we can add matrices to matrices, subtract matrices from matrices, but also add and subtract scalars to and from matrices and vectors
 (scalars are interpreted as diagonal matrices when added to square matrices and as constant vectors when added to vectors).
 
 Here are some examples:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> A = Matrix([[1.0, 2.0], [3.0, 4.0]])
->>> print(A + A)       # calls A.__add__(A)
-[[2.0, 4.0], [6.0, 8.0]]
->>> print(A + 2)       # calls A.__add__(2)
-[[3.0, 2.0], [3.0, 6.0]]
->>> print(A - 1)       # calls A.__add__(1)
-[[0.0, 2.0], [3.0, 3.0]]
->>> print(-A)          # calls A.__neg__()
-[[-1.0, -2.0], [-3.0, -4.0]]
->>> print(5 - A)       # calls A.__rsub__(5)
-[[4.0, -2.0], [-3.0, 1.0]]
->>> b = Matrix([[1.0], [2.0], [3.0]])
->>> print(b + 2)       # calls b.__add__(2)
-[[3.0], [4.0], [5.0]]
+\begin{lstlisting}
+let A = newMatrix(@[@[1.0, 2.0], @[3.0, 4.0]])
+echo A + A          # @[@[2.0, 4.0], @[6.0, 8.0]]
+echo A + 2.0        # @[@[3.0, 2.0], @[3.0, 6.0]]
+echo A - 1.0        # @[@[0.0, 2.0], @[3.0, 3.0]]
+echo -A             # @[@[-1.0, -2.0], @[-3.0, -4.0]]
+echo 5.0 - A        # @[@[4.0, -2.0], @[-3.0, 1.0]]
+let b = newMatrix(@[1.0, 2.0, 3.0])
+echo b + 2.0        # @[@[3.0], @[4.0], @[5.0]]
 \end{lstlisting}
 
-The class {\ft Matrix} works with complex numbers as well:
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> A = Matrix([[1, 2], [3, 4]])
->>> print(A + 1j)
-[[(1+1j), 2.0], [3.0, (4+1j)]]
-\end{lstlisting}
+For complex matrices we would parameterize {\ft Matrix} on a numeric type {\ft T} (e.g., {\ft Matrix[Complex]}). For brevity, the implementation in this book uses {\ft float} only; extending it to a generic element type is a straightforward exercise.
 
 
 \index{matrix!multiplication}\index{scalar product}
 Now we implement multiplication. We are interested in three types of multiplication: multiplication of a scalar by a matrix ({\ft \_\_rmul\_\_}), multiplication of a matrix by a matrix ({\ft \_\_mul\_\_}), and scalar product between two vectors (also handled by {\ft \_\_mul\_\_}):
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-    def __rmul__(A, x):
-        "multiplies a number of matrix A by a scalar number x"
-        M = copy.deepcopy(A)
-        for r in range(M.nrows):
-            for c in range(M.ncols):
-                 M[r, c] *= x
-        return M
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc `*`*(x: float, a: Matrix): Matrix =
+  ## Scalar times matrix.
+  result = newMatrix(a.nrows, a.ncols)
+  for i in 0 ..< a.data.len:
+    result.data[i] = x * a.data[i]
 
-    def __mul__(A, B):
-        "multiplies a number of matrix A by another matrix B"
-        if isinstance(B, (list, tuple)):
-            return (A * Matrix(len(B), 1, fill=lambda r, c:B[r])).nrows
-        elif not isinstance(B, Matrix):
-            return B * A
-        elif A.ncols == 1 and B.ncols == 1 and A.nrows == B.nrows:
-             # try a scalar product ;-)
-            return sum(A[r, 0] * B[r, 0] for r in range(A.nrows))
-        elif A.ncols!=B.nrows:
-            raise ArithmeticError("Incompatible dimension")
-        M = Matrix(A.nrows, B.ncols)
-        for r in range(A.nrows):
-            for c in range(B.ncols):
-                for k in range(A.ncols):
-                    M[r, c] += A[r, k] * B[k, c]
-        return M
+proc `*`*(a: Matrix, x: float): Matrix = x * a
+
+proc `*`*(a, b: Matrix): Matrix =
+  ## Matrix product (or scalar product for two same-length column vectors).
+  if a.ncols == 1 and b.ncols == 1 and a.nrows == b.nrows:
+    var s = 0.0
+    for r in 0 ..< a.nrows: s += a[r, 0] * b[r, 0]
+    result = newMatrix(1, 1, s)
+    return result
+  if a.ncols != b.nrows:
+    raise newException(ArithmeticDefect, "Incompatible dimension")
+  result = newMatrix(a.nrows, b.ncols)
+  for r in 0 ..< a.nrows:
+    for c in 0 ..< b.ncols:
+      var s = 0.0
+      for k in 0 ..< a.ncols:
+        s += a[r, k] * b[k, c]
+      result[r, c] = s
 \end{lstlisting}
 
 This allows us the following operations:
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> A = Matrix([[1.0, 2.0], [3.0, 4.0]])
->>> print(2 * A)        # scalar * matrix
-[[2.0, 4.0], [6.0, 8.0]]
->>> print(A * A)        # matrix * matrix
-[[7.0, 10.0], [15.0, 22.0]]
->>> b = Matrix([[1], [2], [3]])
->>> print(b * b)        # scalar product
-14
+\begin{lstlisting}
+let A = newMatrix(@[@[1.0, 2.0], @[3.0, 4.0]])
+echo 2.0 * A        # scalar * matrix    @[@[2.0, 4.0], @[6.0, 8.0]]
+echo A * A          # matrix * matrix    @[@[7.0, 10.0], @[15.0, 22.0]]
+let b = newMatrix(@[1.0, 2.0, 3.0])
+echo b * b          # scalar product (returns 1x1 matrix containing 14)
 \end{lstlisting}
 
 
@@ -5850,29 +5814,36 @@ In the following code, we consider an image (a set of points) containing a circl
 \item $B_2$, which is neither a scaling nor a rotation; as it can be seen from the image, it does not preserve angles
 \end{itemize}
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> points = [(math.cos(0.0628 * t), math.sin(0.0628 * t)) for t in range(200)]
->>> points += [(0.02 * t, 0) for t in range(50)]
->>> points += [(0, 0.02 * t) for t in range(50)]
->>> Canvas(title="Linear Transformation", xlab="x", ylab="y", 
-...        xrange=(-1, 1), yrange=(-1, 1)).ellipses(points).save("la1.png")
->>> def f(A, points, filename):
-...      data = [(A[0, 0] * x+A[0, 1] * y, A[1, 0] * x+A[1, 1] * y) for (x, y) in points]
-...      Canvas(title="Linear Transformation", xlab="x", ylab="y"
-...            ).ellipses(points).ellipses(data).save(filename)
->>> A1 = Matrix([[0.2, 0], [0, 1]])
->>> f(A1, points, "la2.png")
->>> A2 = Matrix([[1, 0], [0, 0.2]])
->>> f(A2, points, "la3.png")
->>> S = Matrix([[0.3, 0], [0, 0.3]])
->>> f(S, points, "la4.png")
->>> s, c = math.sin(0.5), math.cos(0.5)
->>> R = Matrix([[c, -s], [s, c]])
->>> B1 = R * A1
->>> f(B1, points, "la5.png")
->>> B2 = Matrix([[0.2, 0.4], [0.5, 0.3]])
->>> f(B2, points, "la6.png")
+\begin{lstlisting}
+import nimpy
+let plt = pyImport("matplotlib.pyplot")
+var points: seq[(float, float)] = @[]
+for t in 0 ..< 200:
+  points.add (cos(0.0628 * float(t)), sin(0.0628 * float(t)))
+for t in 0 ..< 50: points.add (0.02 * float(t), 0.0)
+for t in 0 ..< 50: points.add (0.0, 0.02 * float(t))
+
+proc plot(filename: string, points: seq[(float, float)]) =
+  discard plt.figure()
+  discard plt.scatter(points.mapIt(it[0]), points.mapIt(it[1]))
+  discard plt.title("Linear Transformation")
+  discard plt.savefig(filename)
+
+plot("la1.png", points)
+proc f(A: Matrix, points: seq[(float, float)], filename: string) =
+  var data: seq[(float, float)] = @[]
+  for (x, y) in points:
+    data.add (A[0, 0] * x + A[0, 1] * y, A[1, 0] * x + A[1, 1] * y)
+  plot(filename, points & data)
+
+let A1 = newMatrix(@[@[0.2, 0.0], @[0.0, 1.0]]); f(A1, points, "la2.png")
+let A2 = newMatrix(@[@[1.0, 0.0], @[0.0, 0.2]]); f(A2, points, "la3.png")
+let S  = newMatrix(@[@[0.3, 0.0], @[0.0, 0.3]]); f(S, points, "la4.png")
+let s = sin(0.5)
+let c = cos(0.5)
+let R  = newMatrix(@[@[c, -s], @[s, c]])
+let B1 = R * A1;                                  f(B1, points, "la5.png")
+let B2 = newMatrix(@[@[0.2, 0.4], @[0.5, 0.3]]);  f(B2, points, "la6.png")
 \end{lstlisting}
 
 \newpage
@@ -5920,53 +5891,44 @@ $S_{n-1} \ldots S_1 S_0 B \equiv A^{-1}$.
 
 The Gauss-Jordan algorithm works exactly this way: given $A$, it computes $A^{-1}$:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-    def __rtruediv__(A, x):
-        """Computes x/A using Gauss-Jordan elimination where x is a scalar"""
-        n = A.ncols
-        if A.nrows != n:
-           raise ArithmeticError("matrix not squared")
-        indexes = range(n)
-        A = copy.deepcopy(A)
-        B = Matrix.identity(n, x)
-        for c in indexes:
-            for r in range(c+1, n):
-                if abs(A[r, c])>abs(A[c, c]):
-                    A.swap_rows(r, c)
-                    B.swap_rows(r, c)
-            p = 0.0 + A[c, c]  # trick to make sure it is not integer
-            for k in indexes:
-                A[c, k] = A[c, k]/p
-                B[c, k] = B[c, k]/p
-            for r in range(n):
-                if r == c:
-                    continue
-                p = 0.0 + A[r, c]  # trick to make sure it is not integer
-                for k in indexes:
-                    A[r, k] -= A[c, k] * p
-                    B[r, k] -= B[c, k] * p
-        return B
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc inv*(a0: Matrix, x = 1.0): Matrix =
+  ## Returns x * a^-1 using Gauss-Jordan elimination.
+  let n = a0.ncols
+  if a0.nrows != n:
+    raise newException(ArithmeticDefect, "matrix not squared")
+  let a = newMatrix(a0.tolist())   # copy
+  let b = identity(n, x)
+  for c in 0 ..< n:
+    for r in c + 1 ..< n:
+      if abs(a[r, c]) > abs(a[c, c]):
+        a.swapRows(r, c)
+        b.swapRows(r, c)
+    let p = a[c, c]
+    for k in 0 ..< n:
+      a[c, k] = a[c, k] / p
+      b[c, k] = b[c, k] / p
+    for r in 0 ..< n:
+      if r == c: continue
+      let pr = a[r, c]
+      for k in 0 ..< n:
+        a[r, k] -= a[c, k] * pr
+        b[r, k] -= b[c, k] * pr
+  result = b
 
-    def __truediv__(A, B):
-        if isinstance(B, Matrix):
-            return A * (1.0/B)  # matrix/matrix
-        else:
-            return (1.0/B) * A  # matrix/scalar
-
+proc `/`*(x: float, a: Matrix): Matrix = inv(a, x)
+proc `/`*(a: Matrix, x: float): Matrix = (1.0 / x) * a
+proc `/`*(a, b: Matrix): Matrix = a * (1.0 / b)
 \end{lstlisting}
 
 Here is an example, and we will see many more applications later:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> A = Matrix([[1, 2], [4, 9]])
->>> print(1/A)
-[[9.0, -2.0], [-4.0, 1.0]]
->>> print(A/A)
-[[1.0, 0.0], [0.0, 1.0]]
->>> print(A/2)
-[[0.5, 1.0], [2.0, 4.5]]
+\begin{lstlisting}
+let A = newMatrix(@[@[1.0, 2.0], @[4.0, 9.0]])
+echo 1.0 / A    # @[@[9.0, -2.0], @[-4.0, 1.0]]
+echo A / A      # @[@[1.0, 0.0], @[0.0, 1.0]]
+echo A / 2.0    # @[@[0.5, 1.0], @[2.0, 4.5]]
 \end{lstlisting}
 
 \goodbreak\subsection{Transposing a matrix}
@@ -5975,58 +5937,48 @@ Here is an example, and we will see many more applications later:
 
 Another operation that we will need is transposition:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-    @property
-    def T(A):
-        """Transposed of A"""
-        return Matrix(A.ncols, A.nrows, fill=lambda r, c: A[c, r])
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc T*(a: Matrix): Matrix =
+  ## Transpose of `a`.
+  newMatrix(a.ncols, a.nrows,
+    proc(r, c: int): float = a[c, r])
 \end{lstlisting}
 
 Notice the new matrix is defined with the number of rows and columns switched from matrix A. Notice that in Python, a {\ft property} is a method that is called like an attribute, therefore without the {\ft ()} notation.
 This can be used as follows:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> A = Matrix([[1, 2], [3, 4]])
->>> print(A.T)
-[[1, 3], [2, 4]]
+\begin{lstlisting}
+let A = newMatrix(@[@[1.0, 2.0], @[3.0, 4.0]])
+echo A.T()      # @[@[1.0, 3.0], @[2.0, 4.0]]
 \end{lstlisting}
 
 For later use, we define two functions to check whether a matrix is symmetrical or zero within a given precision.
 
-Another typical transformation for matrices of complex numbers is the Hermitian operation, which is a transposition combined with complex conjugation of the elements:
-
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-    @property
-    def H(A):
-        """Hermitian of A"""
-        return Matrix(A.ncols, A.nrows, fill=lambda r, c: A[c, r].conj())
-\end{lstlisting}
+Another typical transformation for matrices of complex numbers is the Hermitian operation, which is a transposition combined with complex conjugation of the elements. Since our {\ft Matrix} type stores {\ft float} values, the Hermitian coincides with the transpose; for a complex {\ft Matrix[Complex]} the same template would apply {\ft conj} element-wise.
 
 \index{matrix!symmetric}
 
 In later algorithms we will need to check whether a matrix is symmetrical (or almost symmetrical given precision) or zero (or almost zero):
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def is_almost_symmetric(A, ap=1e-6, rp=1e-4):
-    if A.nrows != A.ncols: return False
-    for r in range(A.nrows):
-        for c in range(r):
-            delta = abs(A[r, c]-A[c, r])
-            if delta>ap and delta>max(abs(A[r, c]), abs(A[c, r])) * rp:
-                return False
-    return True
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc isAlmostSymmetric*(a: Matrix, ap = 1e-6, rp = 1e-4): bool =
+  if a.nrows != a.ncols: return false
+  for r in 0 ..< a.nrows:
+    for c in 0 ..< r:
+      let delta = abs(a[r, c] - a[c, r])
+      if delta > ap and delta > max(abs(a[r, c]), abs(a[c, r])) * rp:
+        return false
+  return true
 
-def is_almost_zero(A, ap=1e-6, rp=1e-4):
-    for r in range(A.nrows):
-        for c in range(A.ncols):
-            delta = abs(A[r, c]-A[c, r])
-            if delta>ap and delta>max(abs(A[r, c]), abs(A[c, r])) * rp:
-                return False
-    return True
+proc isAlmostZero*(a: Matrix, ap = 1e-6, rp = 1e-4): bool =
+  for r in 0 ..< a.nrows:
+    for c in 0 ..< a.ncols:
+      let delta = abs(a[r, c] - a[c, r])
+      if delta > ap and delta > max(abs(a[r, c]), abs(a[c, r])) * rp:
+        return false
+  return true
 \end{lstlisting}
 
 \goodbreak\subsection{Solving systems of linear equations}
@@ -6066,31 +6018,29 @@ The solution of the equation can now be written as
 
 We can easily solve the system with our Python library:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> A = Matrix([[1, 2, 2], [4, 4, 2], [4, 6, 4]])
->>> b = Matrix([[3], [6], [10]])
->>> x = (1/A) * b
->>> print(x)
-[[-1.0], [3.0], [-1.0]]
+\begin{lstlisting}
+let A = newMatrix(@[@[1.0, 2.0, 2.0], @[4.0, 4.0, 2.0], @[4.0, 6.0, 4.0]])
+let b = newMatrix(@[3.0, 6.0, 10.0])
+let x = (1.0 / A) * b
+echo x          # @[@[-1.0], @[3.0], @[-1.0]]
 \end{lstlisting}
 
 Notice that $b$ is a column vector and therefore
 
 \begin{lstlisting}
->>> b = Matrix([[3], [6], [10]])
+let b = newMatrix(@[3.0, 6.0, 10.0])
 \end{lstlisting}
 
 but not
 
 \begin{lstlisting}
->>> b = Matrix([[3, 6, 10]])  # wrong
+let b = newMatrix(@[@[3.0, 6.0, 10.0]])  # wrong: row vector
 \end{lstlisting}
 
 We can also obtain a column vector by performing a transposition of a row vector:
 
 \begin{lstlisting}
->>> b = Matrix([[3, 6, 10]]).T
+let b = newMatrix(@[@[3.0, 6.0, 10.0]]).T()
 \end{lstlisting}
 
 \goodbreak\subsection{Norm and condition number again}
@@ -6130,76 +6080,77 @@ The 2-norm is difficult to compute for a matrix, but the 1-norm provides an appr
 
 This allows us to define a generic function to compute the norm of lists, matrices/vectors, and scalars:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def norm(A, p=1):
-    if isinstance(A, (list, tuple)):
-        return sum(abs(x) ** p for x in A) ** (1.0/p)
-    elif isinstance(A, Matrix):
-        if A.nrows == 1 or A.ncols == 1:
-             return sum(norm(A[r, c]) ** p \
-                for r in range(A.nrows) \
-                for c in range(A.ncols)) ** (1.0/p)
-        elif p == 1:
-             return max([sum(norm(A[r, c]) \
-                for r in range(A.nrows)) \
-                for c in range(A.ncols)])
-        else:
-             raise NotImplementedError
-    else:
-        return abs(A)
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc norm*(x: float, p = 1): float = abs(x)
+
+proc norm*(xs: seq[float], p = 1): float =
+  var s = 0.0
+  for x in xs: s += abs(x).pow(float(p))
+  result = s.pow(1.0 / float(p))
+
+proc norm*(a: Matrix, p = 1): float =
+  if a.nrows == 1 or a.ncols == 1:
+    var s = 0.0
+    for r in 0 ..< a.nrows:
+      for c in 0 ..< a.ncols:
+        s += abs(a[r, c]).pow(float(p))
+    return s.pow(1.0 / float(p))
+  if p == 1:
+    var best = 0.0
+    for c in 0 ..< a.ncols:
+      var s = 0.0
+      for r in 0 ..< a.nrows: s += abs(a[r, c])
+      if s > best: best = s
+    return best
+  raise newException(ValueError, "norm not implemented for p != 1 on matrix")
 \end{lstlisting}
 
 Now we can implement a function that computes the condition number for ordinary functions as well as for linear transformations represented by a matrix:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def condition_number(f, x=None, h=1e-6):
-    if callable(f) and not x is None:
-        return D(f, h)(x) * x/f(x)
-    elif isinstance(f, Matrix):  # if is the Matrix
-        return norm(f) * norm(1/f)
-    else:
-        raise NotImplementedError
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc conditionNumber*(f: proc(x: float): float, x: float,
+                      h = 1e-6): float =
+  D(f, h)(x) * x / f(x)
+
+proc conditionNumber*(a: Matrix): float =
+  norm(a) * norm(1.0 / a)
 \end{lstlisting}
 
 Here are some examples:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> def f(x): return x * x-5.0 * x
->>> print(round(condition_number(f, 1), 2))
-0.75
->>> A = Matrix([[1, 2], [3, 4]])
->>> print(round(condition_number(A), 2))
-21.0
+\begin{lstlisting}
+proc f(x: float): float = x * x - 5.0 * x
+echo formatFloat(conditionNumber(f, 1.0), ffDecimal, 2)
+# 0.75
+let A = newMatrix(@[@[1.0, 2.0], @[3.0, 4.0]])
+echo formatFloat(conditionNumber(A), ffDecimal, 2)
+# 21.0
 \end{lstlisting}
 
 \index{matrix!exponential}
 
 Having the norm for matrices also allows us to extend the definition of convergence of a Taylor series to a series of matrices:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def exp(x, ap=1e-6, rp=1e-4, ns=40):
-    if isinstance(x, Matrix):
-       t = s = Matrix.identity(x.ncols)
-       for k in range(1, ns):
-           t = t * x/k    # next term
-           s = s + t    # add next term
-           if norm(t)<max(ap, norm(s) * rp): return s
-       raise ArithmeticError("no convergence")
-    elif type(x) == type(1j):
-       return cmath.exp(x)
-    else:
-       return math.exp(x)
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc exp*(a: Matrix, ap = 1e-6, rp = 1e-4, ns = 40): Matrix =
+  ## Matrix exponential by Taylor series.
+  var t = identity(a.ncols)
+  var s = identity(a.ncols)
+  for k in 1 ..< ns:
+    t = t * a * (1.0 / float(k))
+    s = s + t
+    if norm(t) < max(ap, norm(s) * rp):
+      return s
+  raise newException(ArithmeticDefect, "no convergence")
 \end{lstlisting}
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> A = Matrix([[1, 2], [3, 4]])
->>> print(exp(A))
-[[51.96..., 74.73...], [112.10..., 164.07...]]
+\begin{lstlisting}
+let A = newMatrix(@[@[1.0, 2.0], @[3.0, 4.0]])
+echo exp(A)
+# @[@[51.96..., 74.73...], @[112.10..., 164.07...]]
 \end{lstlisting}
 
 \goodbreak\subsection{Cholesky factorization}
@@ -6212,52 +6163,55 @@ If a matrix is symmetric and positive definite, then there exists a lower triang
 
 The Cholesky algorithm takes a matrix $A$ as input and returns the matrix $L$:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def Cholesky(A):
-    if not is_almost_symmetric(A):
-        raise ArithmeticError("not symmetric")
-    L = copy.deepcopy(A)
-    for k in range(L.ncols):
-        if L[k, k]<=0:
-            raise ArithmeticError("not positive definite")
-        p = L[k, k] = math.sqrt(L[k, k])
-        for i in range(k+1, L.nrows):
-            L[i, k] /= p
-        for j in range(k+1, L.nrows):
-            p=float(L[j, k])
-            for i in range(k+1, L.nrows):
-                L[i, j] -= p * L[i, k]
-    for  i in range(L.nrows):
-        for j in range(i+1, L.ncols):
-            L[i, j]=0
-    return L
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc cholesky*(a: Matrix): Matrix =
+  ## Cholesky decomposition: returns lower-triangular `L`
+  ## such that `L * L.T == a`.
+  if not isAlmostSymmetric(a):
+    raise newException(ArithmeticDefect, "not symmetric")
+  let l = newMatrix(a.tolist())   # copy
+  for k in 0 ..< l.ncols:
+    if l[k, k] <= 0:
+      raise newException(ArithmeticDefect, "not positive definite")
+    let p = sqrt(l[k, k])
+    l[k, k] = p
+    for i in k + 1 ..< l.nrows:
+      l[i, k] = l[i, k] / p
+    for j in k + 1 ..< l.nrows:
+      let pj = l[j, k]
+      for i in k + 1 ..< l.nrows:
+        l[i, j] = l[i, j] - pj * l[i, k]
+  for i in 0 ..< l.nrows:
+    for j in i + 1 ..< l.ncols:
+      l[i, j] = 0
+  result = l
 \end{lstlisting}
 
 Here we provide an example and a check that indeed $A=L L^t$:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> A = Matrix([[4, 2, 1], [2, 9, 3], [1, 3, 16]])
->>> L = Cholesky(A)
->>> is_almost_zero(A - L * L.T)
-True
+\begin{lstlisting}
+let A = newMatrix(@[@[4.0, 2.0, 1.0],
+                    @[2.0, 9.0, 3.0],
+                    @[1.0, 3.0, 16.0]])
+let L = cholesky(A)
+echo isAlmostZero(A - L * L.T())   # true
 \end{lstlisting}
 
 The Cholesky algorithm fails if and only if the input matrix is not symmetric or not positive definite, therefore it can be used to check whether a symmetric matrix is positive definite.
 
 Consider for example a generic covariance matrix $A$. It is supposed to be positive definite, but sometimes it is not, because it is computed incorrectly by taking different subsets of the data to compute $A_{ij}$, $A_{jk}$, and $A_{ik}$. The Cholesky algorithm provides an algorithm to check whether a matrix is positive definite:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def is_positive_definite(A):
-    if not is_almost_symmetric(A):
-        return False
-    try:
-        Cholesky(A)
-        return True
-    except Exception:
-        return False
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc isPositiveDefinite*(a: Matrix): bool =
+  if not isAlmostSymmetric(a):
+    return false
+  try:
+    discard cholesky(a)
+    return true
+  except CatchableError:
+    return false
 \end{lstlisting}
 
 Another application of the Cholesky is in generating vectors $\mathbf{x}$ with probability distribution
@@ -6281,21 +6235,23 @@ Therefore the $u_i$ components are Gaussian random variables.
 
 In summary, given a covariance matrix $A$, we can generate random vectors $x$ or random numbers with the same covariance simply by doing
 
-%% META:FILE:nlib.py
-\begin{lstlisting}
-def RandomList(A):
-    L = Cholesky(A)
-    while True:
-        u = Matrix([[random.gauss(0, 1)] for c in range(L.nrows)])
-        yield (L * u).flatten()
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+iterator randomList*(a: Matrix): seq[float] =
+  ## Yields successive random vectors with covariance matrix `a`.
+  let l = cholesky(a)
+  while true:
+    var u = newMatrix(l.nrows, 1)
+    for c in 0 ..< l.nrows: u[c, 0] = gauss(0.0, 1.0)
+    yield (l * u).flatten()
 \end{lstlisting}
 
 Here is an example of how to use it:
 
 \begin{lstlisting}
->>> A = Matrix([[1.0, 0.1], [0.2, 3.0]])
->>> for k, v in enumerate(RandomList(A)):
-...     print(v)
+let A = newMatrix(@[@[1.0, 0.1], @[0.2, 3.0]])
+for v in randomList(A):
+  echo v
 \end{lstlisting}
 
 The {\ft RandomList} is a generator. You can iterate over it. The {\ft yield} keyword is used like {\ft return}, except the function will return a generator.
@@ -6341,59 +6297,51 @@ The inputs of the formula are the covariance matrix ($A$), a vector or arithmeti
 
 Here is the algorithm:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def Markowitz(mu, A, r_free):
-    """Assess Markowitz risk/return.
-    Example:
-    >>> cov = Matrix([[0.04, 0.006, 0.02], 
-    ...               [0.006, 0.09, 0.06], 
-    ...               [0.02, 0.06, 0.16]])
-    >>> mu = Matrix([[0.10], [0.12], [0.15]])
-    >>> r_free = 0.05
-    >>> x, ret, risk = Markowitz(mu, cov, r_free)
-    >>> print(x)
-    [0.556634..., 0.275080..., 0.1682847...]
-    >>> print(ret, risk)
-    0.113915... 0.186747...
-    """
-    x = Matrix([[0.0] for r in range(A.nrows)])
-    x = (1/A) * (mu - r_free)
-    x = x/sum(x[r, 0] for r in range(x.nrows))
-    portfolio = [x[r, 0] for r in range(x.nrows)]
-    portfolio_return = mu * x
-    portfolio_risk = sqrt(x * (A * x))
-    return portfolio, portfolio_return, portfolio_risk
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc markowitz*(mu, a: Matrix, rFree: float):
+                (seq[float], float, float) =
+  ## Markowitz tangency portfolio. Returns (weights, return, risk).
+  var x = (1.0 / a) * (mu - rFree)
+  var s = 0.0
+  for r in 0 ..< x.nrows: s += x[r, 0]
+  x = x / s
+  var portfolio: seq[float] = @[]
+  for r in 0 ..< x.nrows: portfolio.add x[r, 0]
+  let ret = (mu.T * x)[0, 0]
+  let risk = sqrt((x.T * (a * x))[0, 0])
+  (portfolio, ret, risk)
 \end{lstlisting}
 
 Here is an example.
 We consider three assets (0, 1, 2) with the following covariance matrix:
 \begin{lstlisting}
->>> cov = Matrix([[0.04, 0.006, 0.02], 
-...               [0.006, 0.09, 0.06], 
-...               [0.02, 0.06, 0.16]])
+let cov = newMatrix(@[@[0.04, 0.006, 0.02],
+                      @[0.006, 0.09, 0.06],
+                      @[0.02, 0.06, 0.16]])
 \end{lstlisting}
 and the following expected returns (arithmetic returns, not log returns, because the former are additive, whereas the latter are not):
 \begin{lstlisting}
->>> mu = Matrix([[0.10], [0.12], [0.15]])
+let mu = newMatrix(@[0.10, 0.12, 0.15])
 \end{lstlisting}
 Given the risk-free interest rate
 \begin{lstlisting}
->>> r_free = 0.05
+let rFree = 0.05
 \end{lstlisting}
 we compute the tangent portfolio (highest Sharpe ratio), its return, and its risk with one function call:
 \begin{lstlisting}
->>> x, ret, risk = Markowitz(mu, cov, r_free)
->>> print(x)
-[0.5566343042071198, 0.27508090614886727, 0.16828478964401297]
->>> ret, risk
-0.113915857605 0.186747095412
->>> (ret-r_free).risk
-0.34225891152
->>> for r in range(3): print((mu[r, 0]-r_free)/sqrt(cov[r, r]))
-0.25
-0.233333333333
-0.25
+let (x, ret, risk) = markowitz(mu, cov, rFree)
+echo x
+# @[0.5566343042071198, 0.27508090614886727, 0.16828478964401297]
+echo ret, " ", risk
+# 0.113915857605 0.186747095412
+echo (ret - rFree) / risk
+# 0.34225891152
+for r in 0 ..< 3:
+  echo (mu[r, 0] - rFree) / sqrt(cov[r, r])
+# 0.25
+# 0.233333333333
+# 0.25
 \end{lstlisting}
 
 Investing 55\% in asset 0, 27\% in asset 1, and 16\% in asset 2, the resulting portfolio has an expected return of 11.39\% and a risk of 18.67\%, which corresponds to a Sharpe ratio of 0.34, much higher than 0.25, 0.23, and 0.23 for the individual assets.
@@ -6477,47 +6425,46 @@ Its solution is
 
 The following algorithm implements a fitting function based on the preceding procedure. It takes as input a list of functions $f_i$ and a list of points $p_j=(t_j, o_j, do_j)$ and returns three objects---a list with the $c$ coefficients, the value of $\chi^2$ for the best fit, and the fitting function:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def fit_least_squares(points, f):
-    """
-    Computes c_j for best linear fit of y[i] \pm dy[i] = fitting_f(x[i])
-    where fitting_f(x[i]) is \sum_j c_j f[j](x[i])
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+type
+  FitFunc* = proc(x: float): float
 
-    parameters:
-    - a list of fitting functions
-    - a list with points (x, y, dy)
-
-    returns:
-    - column vector with fitting coefficients
-    - the chi2 for the fit
-    - the fitting function as a lambda x: ....
-    """
-    def eval_fitting_function(f, c, x):
-        if len(f) == 1: return c * f[0](x)
-        else: return sum(func(x) * c[i, 0] for i, func in enumerate(f))
-    A = Matrix(len(points), len(f))
-    b = Matrix(len(points))
-    for i in range(A.nrows):
-        weight = 1.0/points[i][2] if len(points[i])>2 else 1.0
-        b[i, 0] = weight * float(points[i][1])
-        for j in range(A.ncols):
-            A[i, j] = weight * f[j](float(points[i][0]))
-    c = (1.0/(A.T * A)) * (A.T * b)
-    chi = A * c-b
-    chi2 = norm(chi, 2) ** 2
-    fitting_f = lambda x, c=c, f=f, q=eval_fitting_function: q(f, c, x)
-    cs = [c] if isinstance(c, float) else c.flatten()
-    return cs, chi2, fitting_f
+proc fitLeastSquares*(points: seq[(float, float, float)],
+                      f: seq[FitFunc]):
+                      (seq[float], float, proc(x: float): float) =
+  ## Linear least-squares fit of `points = (x, y, dy)` to
+  ## `\sum_j c_j f[j](x)`. Returns (coefficients, chi2, fit function).
+  let n = points.len
+  let m = f.len
+  let a = newMatrix(n, m)
+  let b = newMatrix(n, 1)
+  for i in 0 ..< n:
+    let weight = 1.0 / points[i][2]
+    b[i, 0] = weight * points[i][1]
+    for j in 0 ..< m:
+      a[i, j] = weight * f[j](points[i][0])
+  let c = (1.0 / (a.T * a)) * (a.T * b)
+  let chi = a * c - b
+  let chi2Val = norm(chi, 2) ^ 2
+  let cs = c.flatten()
+  let fittingF = proc(x: float): float =
+    var s = 0.0
+    for i in 0 ..< f.len: s += f[i](x) * cs[i]
+    s
+  (cs, chi2Val, fittingF)
 
 # examples of fitting functions
-def POLYNOMIAL(n):
-    return [(lambda x, p=p: x ** p) for p in range(n+1)]
-CONSTANT = POLYNOMIAL(0)
-LINEAR   = POLYNOMIAL(1)
-QUADRATIC = POLYNOMIAL(2)
-CUBIC    = POLYNOMIAL(3)
-QUARTIC  = POLYNOMIAL(4)
+proc polynomial*(n: int): seq[FitFunc] =
+  for p in 0 .. n:
+    let pp = p
+    result.add proc(x: float): float = x ^ pp
+
+let CONSTANT*  = polynomial(0)
+let LINEAR*    = polynomial(1)
+let QUADRATIC* = polynomial(2)
+let CUBIC*     = polynomial(3)
+let QUARTIC*   = polynomial(4)
 \end{lstlisting}
 
 As an example, we can use it to perform a polynomial fit: given a set of points, we want to find the coefficients of a polynomial that best approximate those points.
@@ -6532,26 +6479,30 @@ c_0  + c_1 t_2^{1} + c_2 t_2^{2} +  ... & = & e_2 \simeq o_2 \pm do_2\\
 
 Here is how we can generate some random points and solve the problem for a polynomial of degree 2 (or quadratic fit):
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> points = [(k, 5+0.8 * k+0.3 * k * k+math.sin(k), 2) for k in range(100)]
->>> a, chi2, fitting_f = fit_least_squares(points, QUADRATIC)
->>> for p in points[-10:]:
-...     print(p[0], round(p[1], 2), round(fitting_f(p[0]), 2))
-90 2507.89 2506.98
-91 2562.21 2562.08
-92 2617.02 2617.78
-93 2673.15 2674.08
-94 2730.75 2730.98
-95 2789.18 2788.48
-96 2847.58 2846.58
-97 2905.68 2905.28
-98 2964.03 2964.58
-99 3023.5 3024.48
->>> Canvas(title="polynomial fit", xlab="t", ylab="e(t), o(t)"
-...      ).errorbar(points[:10], legend="o(t)"
-...      ).plot([(p[0], fitting_f(p[0])) for p in points[:10]], legend="e(t)"
-...      ).save("images/polynomialfit.png")
+\begin{lstlisting}
+import nimpy
+let plt = pyImport("matplotlib.pyplot")
+var points: seq[(float, float, float)] = @[]
+for k in 0 ..< 100:
+  let kf = float(k)
+  points.add (kf, 5.0 + 0.8 * kf + 0.3 * kf * kf + sin(kf), 2.0)
+let (a, chi2, fittingF) = fitLeastSquares(points, QUADRATIC)
+for p in points[^10 .. ^1]:
+  echo p[0], " ",
+       formatFloat(p[1], ffDecimal, 2), " ",
+       formatFloat(fittingF(p[0]), ffDecimal, 2)
+# 90 2507.89 2506.98
+# ... (matches the Python output)
+
+discard plt.title("polynomial fit")
+discard plt.errorbar(points[0 ..< 10].mapIt(it[0]),
+                     points[0 ..< 10].mapIt(it[1]),
+                     yerr = points[0 ..< 10].mapIt(it[2]), label = "o(t)")
+discard plt.plot(points[0 ..< 10].mapIt(it[0]),
+                 points[0 ..< 10].mapIt(fittingF(it[0])),
+                 label = "e(t)")
+discard plt.legend()
+discard plt.savefig("images/polynomialfit.png")
 \end{lstlisting}
 
 Fig.~\ref{fit} is a plot of the first 10 points compared with the best fit:
@@ -6577,69 +6528,69 @@ In finance, {\it technical analysis} is an empirical discipline that consists of
 
 \index{class!Trader}
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-class Trader:
-    def model(self, window):
-        "the forecasting model"
-         # we fit last few days quadratically
-        points = list(enumerate(window))
-        a, chi2, fitting_f = fit_least_squares(points, QUADRATIC)
-         # and we extrapolate tomorrow"s price
-        tomorrow_prediction = fitting_f(len(points))
-        return tomorrow_prediction
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+type
+  Trader* = ref object
 
-    def strategy(self, history, ndays=7):
-        "the trading strategy"
-        if len(history)<ndays:
-            return
-        else:
-            today_close = history[-1]
-            tomorrow_prediction = self.model(history[-ndays:])
-            return "buy" if tomorrow_prediction>today_close else "sell"
+proc model*(t: Trader, window: seq[float]): float =
+  ## Fit the last few days quadratically and extrapolate tomorrow's price.
+  var points: seq[(float, float, float)] = @[]
+  for i, v in window:
+    points.add (float(i), v, 1.0)
+  let (_, _, fittingF) = fitLeastSquares(points, QUADRATIC)
+  fittingF(float(points.len))
 
-    def simulate(self, data, cash=1000.0, shares=0.0, daily_rate=0.03/360):
-        "find fitting parameters that optimize the trading strategy"
-        for t in range(len(data)):
-            suggestion = self.strategy(data[:t])
-            today_close = data[t-1]
-             # and we buy or sell based on our strategy
-            if cash>0 and suggestion == "buy":
-                 # we keep track of finances
-                shares_bought = int(cash/today_close)
-                shares += shares_bought
-                cash -= shares_bought * today_close
-            elif shares>0 and suggestion == "sell":
-                cash += shares * today_close
-                shares = 0.0
-             # we assume money in the bank also gains an interest
-            cash *=math.exp(daily_rate)
-         # we return the net worth
-        return cash + shares * data[-1]
+proc strategy*(t: Trader, history: seq[float], ndays = 7): string =
+  if history.len < ndays: return ""
+  let todayClose = history[^1]
+  let tomorrowPrediction = t.model(history[^ndays .. ^1])
+  if tomorrowPrediction > todayClose: "buy" else: "sell"
+
+proc simulate*(t: Trader, data: seq[float],
+               cash = 1000.0, shares = 0.0,
+               dailyRate = 0.03 / 360.0): float =
+  var cash = cash
+  var shares = shares
+  for tIdx in 0 ..< data.len:
+    let suggestion = t.strategy(data[0 ..< tIdx])
+    let todayClose = data[max(tIdx - 1, 0)]
+    if cash > 0 and suggestion == "buy":
+      let sharesBought = float(int(cash / todayClose))
+      shares += sharesBought
+      cash -= sharesBought * todayClose
+    elif shares > 0 and suggestion == "sell":
+      cash += shares * todayClose
+      shares = 0.0
+    cash *= exp(dailyRate)
+  cash + shares * data[^1]
 \end{lstlisting}
 
 Now we back test the strategy using fake financial data. We can generate fake financial data with this function:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def fake_stock_prices(start_price=100, average_return=0.05, volatility=0.30, days=100):
-    daily_volatility = volatility/math.sqrt(250)
-    daily_return = average_return/250
-    s = [random.gauss(0, daily_volatility) for d in range(days-1)]
-    mu = daily_return - sum(s)/(days-1)
-    v = [start_price]
-    for item in s:
-        v.append(v[-1] * math.exp(mu + item))
-    return v
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc fakeStockPrices*(startPrice = 100.0, averageReturn = 0.05,
+                     volatility = 0.30, days = 100): seq[float] =
+  let dailyVolatility = volatility / sqrt(250.0)
+  let dailyReturn = averageReturn / 250.0
+  var s: seq[float] = @[]
+  for _ in 0 ..< days - 1: s.add gauss(0.0, dailyVolatility)
+  var sumS = 0.0
+  for v in s: sumS += v
+  let mu = dailyReturn - sumS / float(days - 1)
+  var v = @[startPrice]
+  for item in s:
+    v.add v[^1] * exp(mu + item)
+  result = v
 \end{lstlisting}
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> initial_cash = 1000
->>> data = fake_stock_prices(average_return=0.05) 
->>> final_cash = Trader().simulate(data, cash=initial_cash)
->>> naive_profit = initial_cash * (math.exp(0.05) - 1)
->>> strategy_profit = final_cash - initial_cash
+\begin{lstlisting}
+let initialCash = 1000.0
+let data = fakeStockPrices(averageReturn = 0.05)
+let finalCash = Trader().simulate(data, cash = initialCash)
+let naiveProfit = initialCash * (exp(0.05) - 1.0)
+let strategyProfit = finalCash - initialCash
 \end{lstlisting}
 
 If {\ft strategy\_profit} > {\ft naive\_profit} then our strategy outperforms the naive buy and hold strategy.
@@ -6708,104 +6659,104 @@ $U$ is a matrix whose column $i$ is the $\mathbf{x}_i$ eigenvalue.
 The following algorithm is called the Jacobi algorithm. It takes as input a symmetric matrix $A$ and returns the matrix $U$ and a list of corresponding eigenvalues $e$, sorted from smallest to largest:
 
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def sqrt(x):
-    try:
-        return math.sqrt(x)
-    except ValueError:
-        return cmath.sqrt(x)
-
-def Jacobi_eigenvalues(A, checkpoint=False):
-    """Returns U end e so that A=U * diagonal(e) * transposed(U)
-       where i-column of U contains the eigenvector corresponding to
-       the eigenvalue e[i] of A.
-
-       from http://en.wikipedia.org/wiki/Jacobi_eigenvalue_algorithm
-    """
-    def maxind(M, k):
-        j=k+1
-        for i in range(k+2, M.ncols):
-            if abs(M[k, i])>abs(M[k, j]):
-               j=i
-        return j
-    n = A.nrows
-    if n!=A.ncols:
-        raise ArithmeticError("matrix not squared")
-    indexes = range(n)
-    S = Matrix(n, n, fill=lambda r, c: float(A[r, c]))
-    E = Matrix.identity(n)
-    state = n
-    ind = [maxind(S, k) for k in indexes]
-    e = [S[k, k] for k in indexes]
-    changed = [True for k in indexes]
-    iteration = 0
-    while state:
-        if checkpoint: checkpoint("rotating vectors (%i) ..." % iteration)
-        m=0
-        for k in range(1, n-1):
-            if abs(S[k, ind[k]])>abs(S[m, ind[m]]): m=k
-            pass
-        k, h = m, ind[m]
-        p = S[k, h]
-        y = (e[h]-e[k])/2
-        t = abs(y)+sqrt(p * p+y * y)
-        s = sqrt(p * p+t * t)
-        c = t/s
-        s = p/s
-        t = p * p/t
-        if y<0: s, t = -s, -t
-        S[k, h] = 0
-        y = e[k]
-        e[k] = y-t
-        if changed[k] and y == e[k]:
-            changed[k], state = False, state-1
-        elif (not changed[k]) and y!=e[k]:
-            changed[k], state = True, state+1
-        y = e[h]
-        e[h] = y+t
-        if changed[h] and y == e[h]:
-            changed[h], state = False, state-1
-        elif (not changed[h]) and y!=e[h]:
-            changed[h], state = True, state+1
-        for i in range(k):
-            S[i, k], S[i, h] = c * S[i, k]-s * S[i, h], s * S[i, k]+c * S[i, h]
-        for i in range(k+1, h):
-            S[k, i], S[i, h] = c * S[k, i]-s * S[i, h], s * S[k, i]+c * S[i, h]
-        for i in range(h+1, n):
-            S[k, i], S[h, i] = c * S[k, i]-s * S[h, i], s * S[k, i]+c * S[h, i]
-        for i in indexes:
-            E[k, i], E[h, i] = c * E[k, i]-s * E[h, i], s * E[k, i]+c * E[h, i]
-        ind[k], ind[h]=maxind(S, k), maxind(S, h)
-        iteration+=1
-     # sort vectors
-    for i in range(1, n):
-        j=i
-        while j>0 and e[j-1]>e[j]:
-            e[j], e[j-1] = e[j-1], e[j]
-            E.swap_rows(j, j-1)
-            j-=1
-     # normalize vectors
-    U = Matrix(n, n)
-    for i in indexes:
-        norm = sqrt(sum(E[i, j] ** 2 for j in indexes))
-        for j in indexes: U[j, i] = E[i, j]/norm
-    return U, e
-
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc jacobiEigenvalues*(a: Matrix): (Matrix, seq[float]) =
+  ## Returns (U, e) so that `a == U * diagonal(e) * U.T`.
+  ## The i-th column of U is the eigenvector for eigenvalue `e[i]`.
+  proc maxind(m: Matrix, k: int): int =
+    var j = k + 1
+    for i in k + 2 ..< m.ncols:
+      if abs(m[k, i]) > abs(m[k, j]): j = i
+    j
+  let n = a.nrows
+  if n != a.ncols:
+    raise newException(ArithmeticDefect, "matrix not squared")
+  let s = newMatrix(a.tolist())
+  let eMat = identity(n)
+  var state = n
+  var ind = newSeq[int](n)
+  var e = newSeq[float](n)
+  var changed = newSeq[bool](n)
+  for k in 0 ..< n:
+    ind[k] = maxind(s, k)
+    e[k] = s[k, k]
+    changed[k] = true
+  while state > 0:
+    var m = 0
+    for k in 1 ..< n - 1:
+      if abs(s[k, ind[k]]) > abs(s[m, ind[m]]): m = k
+    let k = m
+    let h = ind[m]
+    let p = s[k, h]
+    var y = (e[h] - e[k]) / 2.0
+    var t = abs(y) + sqrt(p * p + y * y)
+    var sv = sqrt(p * p + t * t)
+    var c = t / sv
+    var ss = p / sv
+    t = p * p / t
+    if y < 0:
+      ss = -ss
+      t = -t
+    s[k, h] = 0
+    y = e[k]
+    e[k] = y - t
+    if changed[k] and y == e[k]:
+      changed[k] = false; dec state
+    elif (not changed[k]) and y != e[k]:
+      changed[k] = true; inc state
+    y = e[h]
+    e[h] = y + t
+    if changed[h] and y == e[h]:
+      changed[h] = false; dec state
+    elif (not changed[h]) and y != e[h]:
+      changed[h] = true; inc state
+    for i in 0 ..< k:
+      let a1 = c * s[i, k] - ss * s[i, h]
+      let a2 = ss * s[i, k] + c * s[i, h]
+      s[i, k] = a1; s[i, h] = a2
+    for i in k + 1 ..< h:
+      let a1 = c * s[k, i] - ss * s[i, h]
+      let a2 = ss * s[k, i] + c * s[i, h]
+      s[k, i] = a1; s[i, h] = a2
+    for i in h + 1 ..< n:
+      let a1 = c * s[k, i] - ss * s[h, i]
+      let a2 = ss * s[k, i] + c * s[h, i]
+      s[k, i] = a1; s[h, i] = a2
+    for i in 0 ..< n:
+      let a1 = c * eMat[k, i] - ss * eMat[h, i]
+      let a2 = ss * eMat[k, i] + c * eMat[h, i]
+      eMat[k, i] = a1; eMat[h, i] = a2
+    ind[k] = maxind(s, k)
+    ind[h] = maxind(s, h)
+  # sort vectors
+  for i in 1 ..< n:
+    var j = i
+    while j > 0 and e[j - 1] > e[j]:
+      swap(e[j], e[j - 1])
+      eMat.swapRows(j, j - 1)
+      dec j
+  # normalize vectors
+  let u = newMatrix(n, n)
+  for i in 0 ..< n:
+    var s2 = 0.0
+    for j in 0 ..< n: s2 += eMat[i, j] ^ 2
+    let nrm = sqrt(s2)
+    for j in 0 ..< n: u[j, i] = eMat[i, j] / nrm
+  (u, e)
 \end{lstlisting}
 
 Here is an example that shows, for a particular case, the relation between the input, $A$, of the output of the $U, e$ of the Jacobi algorithm:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> import random
->>> A = Matrix(4, 4)
->>> for r in range(A.nrows):
-...     for c in range(r, A.ncols):
-...         A[r, c] = A[c, r] = random.gauss(10, 10)
->>> U, e = Jacobi_eigenvalues(A)
->>> is_almost_zero(U * Matrix.diagonal(e) * U.T-A)
-True
+\begin{lstlisting}
+randomize()
+let A = newMatrix(4, 4)
+for r in 0 ..< A.nrows:
+  for c in r ..< A.ncols:
+    A[r, c] = gauss(10.0, 10.0)
+    A[c, r] = A[r, c]
+let (U, e) = jacobiEigenvalues(A)
+echo isAlmostZero(U * diagonal(e) * U.T() - A)   # true
 \end{lstlisting}
 
 Eigenvalues can be used to filter noise out of data and find hidden dependencies in data. Following are some examples.
@@ -6824,30 +6775,40 @@ First, we compute the correlation matrix for all the stocks. This is a nontrivia
 
 %%%% FIXME EXAMPLE?
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def compute_correlation_matrix(v):
-    """Input is a list of lists where some elements can be missing (None)"""
-    m = len(v)
-    n = len(v[0])
-    mus = [sum(v[i][k] for k in range(n))/n for i in range(m)]
-    var = [sum(v[i][k] ** 2 for k in range(n))/n - mus[i] ** 2 for i in range(m)]
-    corr = Matrix(m, m, fill=lambda i, j: \
-             (sum(v[i][k] * v[j][k] for k in range(1, n))/n - mus[i] * mus[j])/ \
-             math.sqrt(var[i] * var[j]))
-    return corr
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc computeCorrelationMatrix*(v: seq[seq[float]]): Matrix =
+  ## Pearson correlation matrix of `v` (rows are series).
+  let m = v.len
+  let n = v[0].len
+  var mus = newSeq[float](m)
+  var vars = newSeq[float](m)
+  for i in 0 ..< m:
+    var s = 0.0
+    for k in 0 ..< n: s += v[i][k]
+    mus[i] = s / float(n)
+    var s2 = 0.0
+    for k in 0 ..< n: s2 += v[i][k] ^ 2
+    vars[i] = s2 / float(n) - mus[i] ^ 2
+  result = newMatrix(m, m,
+    proc(i, j: int): float =
+      var s = 0.0
+      for k in 1 ..< n: s += v[i][k] * v[j][k]
+      (s / float(n) - mus[i] * mus[j]) / sqrt(vars[i] * vars[j]))
 \end{lstlisting}
 
 We use the preceding function to compute the correlation and pass it as input to the Jacobi algorithm and plot the output eigenvalues:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> stocks = [fake_stock_prices() for i in range(5)]
->>> corr = compute_correlation_matrix(stocks)
->>> U, e = Jacobi_eigenvalues(corr)
->>> Canvas(title="Fake Stock Correlations", xlab="i", ylab="e[i]"
-...       ).plot([(i, ei) for i, ei, in enumerate(e)]
-...       ).save("images/correlations.png")
+\begin{lstlisting}
+import nimpy
+let plt = pyImport("matplotlib.pyplot")
+var stocks: seq[seq[float]] = @[]
+for _ in 0 ..< 5: stocks.add fakeStockPrices()
+let corr = computeCorrelationMatrix(stocks)
+let (U, e) = jacobiEigenvalues(corr)
+discard plt.title("Fake Stock Correlations")
+discard plt.plot(toSeq(0 ..< e.len), e)
+discard plt.savefig("images/correlations.png")
 \end{lstlisting}
 
 \begin{figure}[ht]
@@ -6904,21 +6865,22 @@ If a solution to the original problem exists, ignoring precision issues, the min
 
 Notice that in the following code, $x$ and $y$ are exchanged because we adopt the convention that $y$ is the output and $x$ is the input:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-import copy
-
-def invert_minimum_residual(f, x, ap=1e-4, rp=1e-4, ns=200):
-    y = copy.copy(x)
-    r = x-1.0 * f(x)
-    for k in range(ns):
-        q = f(r)
-        alpha = (q * r)/(q * q)
-        y = y + alpha * r
-        r = r - alpha * q
-        residue = sqrt((r * r)/r.nrows)
-        if residue<max(ap, norm(y) * rp): return y
-    raise ArithmeticError("no convergence")
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc invertMinimumResidual*(f: proc(x: Matrix): Matrix,
+                            x: Matrix,
+                            ap = 1e-4, rp = 1e-4, ns = 200): Matrix =
+  ## Minimum residual iterative solver for `f(x) = y` (sparse linear ops).
+  var y = newMatrix(x.tolist())
+  var r = x - f(x)
+  for k in 0 ..< ns:
+    let q = f(r)
+    let alpha = (q.T * r)[0, 0] / (q.T * q)[0, 0]
+    y = y + alpha * r
+    r = r - alpha * q
+    let residue = sqrt((r.T * r)[0, 0] / float(r.nrows))
+    if residue < max(ap, norm(y) * rp): return y
+  raise newException(ArithmeticDefect, "no convergence")
 \end{lstlisting}
 
 \goodbreak\subsection{Stabilized biconjugate gradient}
@@ -6927,30 +6889,35 @@ def invert_minimum_residual(f, x, ap=1e-4, rp=1e-4, ns=200):
 
 The stabilized biconjugate gradient~\cite{bicgstab} method is also based on constructing a Krylov subspace and minimizing the same residue as in the minimum residual algorithm, yet it is faster than the minimum residual and has a smoother convergence than other conjugate gradient methods:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def invert_bicgstab(f, x, ap=1e-4, rp=1e-4, ns=200):
-    y = copy.copy(x)
-    r = x - 1.0 * f(x)
-    q = r
-    p = 0.0
-    s = 0.0
-    rho_old = alpha = omega = 1.0
-    for k in range(ns):
-        rho = q * r
-        beta = (rho/rho_old) * (alpha/omega)
-        rho_old = rho
-        p = beta * p + r - (beta * omega) * s
-        s = f(p)
-        alpha = rho/(q * s)
-        r = r - alpha * s
-        t = f(r)
-        omega = (t * r)/(t * t)
-        y = y + omega * r + alpha * p
-        residue=sqrt((r * r)/r.nrows)
-        if residue<max(ap, norm(y) * rp): return y
-        r = r - omega * t
-    raise ArithmeticError("no convergence")
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc invertBicgstab*(f: proc(x: Matrix): Matrix,
+                     x: Matrix,
+                     ap = 1e-4, rp = 1e-4, ns = 200): Matrix =
+  ## Stabilized bi-conjugate gradient iterative solver.
+  var y = newMatrix(x.tolist())
+  var r = x - f(x)
+  let q = newMatrix(r.tolist())
+  var p = newMatrix(r.nrows, 1)
+  var s = newMatrix(r.nrows, 1)
+  var rhoOld = 1.0
+  var alpha = 1.0
+  var omega = 1.0
+  for k in 0 ..< ns:
+    let rho = (q.T * r)[0, 0]
+    let beta = (rho / rhoOld) * (alpha / omega)
+    rhoOld = rho
+    p = beta * p + r - (beta * omega) * s
+    s = f(p)
+    alpha = rho / (q.T * s)[0, 0]
+    r = r - alpha * s
+    let tt = f(r)
+    omega = (tt.T * r)[0, 0] / (tt.T * tt)[0, 0]
+    y = y + omega * r + alpha * p
+    let residue = sqrt((r.T * r)[0, 0] / float(r.nrows))
+    if residue < max(ap, norm(y) * rp): return y
+    r = r - omega * tt
+  raise newException(ArithmeticDefect, "no convergence")
 \end{lstlisting}
 
 Notice that the minimum residual and the stabilized biconjugate gradient, if they converge, converge to the same value.
@@ -6983,28 +6950,39 @@ Here $\alpha$ and $\beta$ are smearing coefficients. When $\alpha=0$ or $\beta=0
 
 In the following code, we generate an image $x$ and filter it through a lens operator {\ft smear}, obtaining a smeared image $y$. We then use the sparse matrix inverter to reconstruct the original image $x$ given the smeared image $y$. We use the {\ft color2d} plotting function to represent the images:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> m = 30
->>> x = Matrix(m * m, 1, fill=lambda r, c:(r//m in(10, 20) or r%m in(10, 20)) and 1. or 0.)
->>> def smear(x):
-...     alpha, beta = 0.4, 8
-...     for k in range(beta):
-...        y = Matrix(x.nrows, 1)
-...        for r in range(m):
-...            for c in range(m):
-...                y[r * m+c, 0] = (1.0-alpha/4) * x[r * m+c, 0]
-...                if c<m-1: y[r * m+c, 0] += alpha * x[r * m+c+1, 0]
-...                if c>0:   y[r * m+c, 0] += alpha * x[r * m+c-1, 0]
-...                if r<m-1: y[r * m+c, 0] += alpha * x[r * m+c+m, 0]
-...                if c>0:   y[r * m+c, 0] += alpha * x[r * m+c-m, 0]
-...        x = y
-...     return y
->>> y = smear(x)
->>> z = invert_minimum_residual(smear, y, ns=1000)
->>> y = y.reshape(m, m)
->>> Canvas(title="Defocused image").imshow(y.tolist()).save("images/defocused.png")
->>> Canvas(title="refocus image").imshow(z.tolist()).save("images/refocused.png")
+\begin{lstlisting}
+import nimpy
+let plt = pyImport("matplotlib.pyplot")
+let m = 30
+let x = newMatrix(m * m, 1,
+  proc(r, c: int): float =
+    if r div m in [10, 20] or r mod m in [10, 20]: 1.0 else: 0.0)
+
+proc smear(x: Matrix): Matrix =
+  let alpha = 0.4
+  let beta = 8
+  var x = x
+  for _ in 0 ..< beta:
+    let y = newMatrix(x.nrows, 1)
+    for r in 0 ..< m:
+      for c in 0 ..< m:
+        y[r * m + c, 0] = (1.0 - alpha / 4.0) * x[r * m + c, 0]
+        if c < m - 1: y[r * m + c, 0] += alpha * x[r * m + c + 1, 0]
+        if c > 0:     y[r * m + c, 0] += alpha * x[r * m + c - 1, 0]
+        if r < m - 1: y[r * m + c, 0] += alpha * x[r * m + c + m, 0]
+        if r > 0:     y[r * m + c, 0] += alpha * x[r * m + c - m, 0]
+    x = y
+  result = x
+
+let y = smear(x)
+let z = invertMinimumResidual(smear, y, ns = 1000)
+discard plt.title("Defocused image")
+discard plt.imshow(y.reshape(m, m).tolist())
+discard plt.savefig("images/defocused.png")
+discard plt.figure()
+discard plt.title("refocus image")
+discard plt.imshow(z.reshape(m, m).tolist())
+discard plt.savefig("images/refocused.png")
 \end{lstlisting}
 
 \begin{figure}[ht]
@@ -7063,27 +7041,29 @@ The $x_i$ series will get closer and closer to the solution $x$.
 
 Here is the process implemented into an algorithm:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def solve_fixed_point(f, x, ap=1e-6, rp=1e-4, ns=100):
-    def g(x): return f(x)+x  # f(x)=0 <=> g(x)=x
-    Dg = D(g)
-    for k in range(ns):
-        if abs(Dg(x)) >= 1:
-            raise ArithmeticError("error D(g)(x)>=1")
-        (x_old, x) = (x, g(x))
-        if k>2 and norm(x_old-x)<max(ap, norm(x) * rp):
-            return x
-    raise ArithmeticError("no convergence")
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc solveFixedPoint*(f: proc(x: float): float, x0: float,
+                      ap = 1e-6, rp = 1e-4, ns = 100): float =
+  let g = proc(x: float): float = f(x) + x
+  let Dg = D(g)
+  var x = x0
+  for k in 0 ..< ns:
+    if abs(Dg(x)) >= 1:
+      raise newException(ArithmeticDefect, "error D(g)(x)>=1")
+    let xOld = x
+    x = g(x)
+    if k > 2 and norm(xOld - x) < max(ap, norm(x) * rp):
+      return x
+  raise newException(ArithmeticDefect, "no convergence")
 \end{lstlisting}
 
 And here is an example:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> def f(x): return (x-2) * (x-5)/10
->>> round(solve_fixed_point(f, 1.0, rp=0), 4)
-2.0
+\begin{lstlisting}
+proc f(x: float): float = (x - 2.0) * (x - 5.0) / 10.0
+echo formatFloat(solveFixedPoint(f, 1.0, rp = 0.0), ffDecimal, 4)
+# 2.0000
 \end{lstlisting}
 
 \goodbreak\subsection{Bisection method}
@@ -7092,30 +7072,37 @@ And here is an example:
 
 The goal of the bisection~\cite{bisection} method is to solve $f(x)=0$ when the function is continuous and it is known to change sign in between $x=a$ and $x=b$. The bisection method is the continuous equivalent of the binary search algorithm seen in chapter 3. The algorithm iteratively finds the middle point of the domain $x=(b+a)/2$, evaluates the function there, and decides whether the solution is on the left or the right, thus reducing the size of the domain from $(a, b)$ to $(a, x)$ or $(x, b)$, respectively:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def solve_bisection(f, a, b, ap=1e-6, rp=1e-4, ns=100):
-    fa, fb = f(a), f(b)
-    if fa == 0: return a
-    if fb == 0: return b
-    if fa * fb > 0:
-        raise ArithmeticError("f(a) and f(b) must have opposite sign")
-    for k in range(ns):
-        x = (a+b)/2
-        fx = f(x)
-        if fx == 0 or norm(b-a)<max(ap, norm(x) * rp): return x
-        elif fx * fa < 0: (b, fb) = (x, fx)
-        else: (a, fa) = (x, fx)
-    raise ArithmeticError("no convergence")
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc solveBisection*(f: proc(x: float): float, a0, b0: float,
+                     ap = 1e-6, rp = 1e-4, ns = 100): float =
+  var a = a0
+  var b = b0
+  var fa = f(a)
+  var fb = f(b)
+  if fa == 0: return a
+  if fb == 0: return b
+  if fa * fb > 0:
+    raise newException(ArithmeticDefect,
+                       "f(a) and f(b) must have opposite sign")
+  for k in 0 ..< ns:
+    let x = (a + b) / 2.0
+    let fx = f(x)
+    if fx == 0 or norm(b - a) < max(ap, norm(x) * rp):
+      return x
+    if fx * fa < 0:
+      b = x; fb = fx
+    else:
+      a = x; fa = fx
+  raise newException(ArithmeticDefect, "no convergence")
 \end{lstlisting}
 
 Here is how to use it:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> def f(x): return (x-2) * (x-5)
->>> round(solve_bisection(f, 1.0, 3.0), 4)
-2.0
+\begin{lstlisting}
+proc f(x: float): float = (x - 2.0) * (x - 5.0)
+echo formatFloat(solveBisection(f, 1.0, 3.0), ffDecimal, 4)
+# 2.0000
 \end{lstlisting}
 
 \goodbreak\subsection{Newton method}
@@ -7132,28 +7119,31 @@ f(x) = 0 \rightarrow x = x_0 - \frac{f(x_0)}{f'(x_0)}
 \end{equation}
 thus finding a new and better estimate for the solution. The algorithm iterates the preceding equation, and when it converges, it approximates the exact solution better and better:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def solve_newton(f, x, ap=1e-6, rp=1e-4, ns=20):
-    x = float(x)  # make sure it is not int
-    for k in range(ns):
-        (fx, Dfx) = (f(x), D(f)(x))
-        if norm(Dfx) < ap:
-            raise ArithmeticError("unstable solution")
-        (x_old, x) = (x, x-fx/Dfx)
-        if k>2 and norm(x-x_old)<max(ap, norm(x) * rp): return x
-    raise ArithmeticError("no convergence")
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc solveNewton*(f: proc(x: float): float, x0: float,
+                  ap = 1e-6, rp = 1e-4, ns = 20): float =
+  var x = x0
+  for k in 0 ..< ns:
+    let fx = f(x)
+    let Dfx = D(f)(x)
+    if norm(Dfx) < ap:
+      raise newException(ArithmeticDefect, "unstable solution")
+    let xOld = x
+    x = x - fx / Dfx
+    if k > 2 and norm(x - xOld) < max(ap, norm(x) * rp):
+      return x
+  raise newException(ArithmeticDefect, "no convergence")
 \end{lstlisting}
 
 The algorithm is guaranteed to converge if $|f'(x)|>1$ in some neighborhood of the solution and if the starting point is in this neighborhood. It may also converge if this condition is not true. It is likely to fail when $|f'(x)|\simeq 0$ is in the neighborhood of the solution or the starting point because the terms {\ft fx/Dfx} would become very large.
 
 Here is an example:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> def f(x): return (x-2) * (x-5)
->>> round(solve_newton(f, 1.0), 4)
-2.0
+\begin{lstlisting}
+proc f(x: float): float = (x - 2.0) * (x - 5.0)
+echo formatFloat(solveNewton(f, 1.0), ffDecimal, 4)
+# 2.0000
 \end{lstlisting}
 
 \goodbreak\subsection{Secant method}
@@ -7167,28 +7157,32 @@ x_{i+i} &=& x_i - \frac{f(x_i)}{f'(x_i)}
 \end{eqnarray}
 As the algorithm approaches the exact solution, the numerical derivative becomes a better and better approximation for the derivative:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def solve_secant(f, x, ap=1e-6, rp=1e-4, ns=20):
-    x = float(x)  # make sure it is not int
-    (fx, Dfx) = (f(x), D(f)(x))
-    for k in range(ns):
-        if norm(Dfx) < ap:
-            raise ArithmeticError("unstable solution")
-        (x_old, fx_old, x) = (x, fx, x-fx/Dfx)
-        if k>2 and norm(x-x_old)<max(ap, norm(x) * rp): return x
-        fx = f(x)
-        Dfx = (fx-fx_old)/(x-x_old)
-    raise ArithmeticError("no convergence")
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc solveSecant*(f: proc(x: float): float, x0: float,
+                  ap = 1e-6, rp = 1e-4, ns = 20): float =
+  var x = x0
+  var fx = f(x)
+  var Dfx = D(f)(x)
+  for k in 0 ..< ns:
+    if norm(Dfx) < ap:
+      raise newException(ArithmeticDefect, "unstable solution")
+    let xOld = x
+    let fxOld = fx
+    x = x - fx / Dfx
+    if k > 2 and norm(x - xOld) < max(ap, norm(x) * rp):
+      return x
+    fx = f(x)
+    Dfx = (fx - fxOld) / (x - xOld)
+  raise newException(ArithmeticDefect, "no convergence")
 \end{lstlisting}
 
 Here is an example:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> def f(x): return (x-2) * (x-5)
->>> round(solve_secant(f, 1.0), 4)
-2.0
+\begin{lstlisting}
+proc f(x: float): float = (x - 2.0) * (x - 5.0)
+echo formatFloat(solveSecant(f, 1.0), ffDecimal, 4)
+# 2.0000
 \end{lstlisting}
 
 \goodbreak\section{Optimization in one dimension}
@@ -7203,45 +7197,48 @@ For this reason, if the function is differentiable twice, we can simply rename a
 
 \index{bisection method}
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def optimize_bisection(f, a, b, ap=1e-6, rp=1e-4, ns=100):
-    return solve_bisection(D(f), a, b , ap, rp, ns)
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc optimizeBisection*(f: proc(x: float): float, a, b: float,
+                        ap = 1e-6, rp = 1e-4, ns = 100): float =
+  solveBisection(D(f), a, b, ap, rp, ns)
 \end{lstlisting}
 
 Here is an example:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> def f(x): return (x-2) * (x-5)
->>> round(optimize_bisection(f, 2.0, 5.0), 4)
-3.5
+\begin{lstlisting}
+proc f(x: float): float = (x - 2.0) * (x - 5.0)
+echo formatFloat(optimizeBisection(f, 2.0, 5.0), ffDecimal, 4)
+# 3.5000
 \end{lstlisting}
 
 \goodbreak\subsection{Newton method}
 
 \index{Newton optimization}
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def optimize_newton(f, x, ap=1e-6, rp=1e-4, ns=20):
-    x = float(x)  # make sure it is not int
-    (f, Df) = (D(f), DD(f))
-    for k in range(ns):
-        (fx, Dfx) = (f(x), Df(x))
-        if Dfx == 0: return x
-        if norm(Dfx) < ap:
-            raise ArithmeticError("unstable solution")
-        (x_old, x) = (x, x-fx/Dfx)
-        if norm(x-x_old)<max(ap, norm(x) * rp): return x
-    raise ArithmeticError("no convergence")
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc optimizeNewton*(f: proc(x: float): float, x0: float,
+                     ap = 1e-6, rp = 1e-4, ns = 20): float =
+  var x = x0
+  let f1 = D(f)
+  let f2 = DD(f)
+  for k in 0 ..< ns:
+    let fx = f1(x)
+    let Dfx = f2(x)
+    if Dfx == 0: return x
+    if norm(Dfx) < ap:
+      raise newException(ArithmeticDefect, "unstable solution")
+    let xOld = x
+    x = x - fx / Dfx
+    if norm(x - xOld) < max(ap, norm(x) * rp): return x
+  raise newException(ArithmeticDefect, "no convergence")
 \end{lstlisting}
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> def f(x): return (x-2) * (x-5)
->>> round(optimize_newton(f, 3.0), 3)
-3.5
+\begin{lstlisting}
+proc f(x: float): float = (x - 2.0) * (x - 5.0)
+echo formatFloat(optimizeNewton(f, 3.0), ffDecimal, 3)
+# 3.500
 \end{lstlisting}
 
 \goodbreak\subsection{Secant method}
@@ -7250,28 +7247,32 @@ def optimize_newton(f, x, ap=1e-6, rp=1e-4, ns=20):
 
 As in the Newton case, the secant method can also be used to find extrema, by replacing $f$ with $f'$:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def optimize_secant(f, x, ap=1e-6, rp=1e-4, ns=100):
-    x = float(x)  # make sure it is not int
-    (f, Df) = (D(f), DD(f))
-    (fx, Dfx) = (f(x), Df(x))
-    for k in range(ns):
-        if fx == 0: return x
-        if norm(Dfx) < ap:
-            raise ArithmeticError("unstable solution")
-        (x_old, fx_old, x) = (x, fx, x-fx/Dfx)
-        if norm(x-x_old)<max(ap, norm(x) * rp): return x
-        fx = f(x)
-        Dfx = (fx - fx_old)/(x-x_old)
-    raise ArithmeticError("no convergence")
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc optimizeSecant*(f: proc(x: float): float, x0: float,
+                     ap = 1e-6, rp = 1e-4, ns = 100): float =
+  var x = x0
+  let f1 = D(f)
+  let f2 = DD(f)
+  var fx = f1(x)
+  var Dfx = f2(x)
+  for k in 0 ..< ns:
+    if fx == 0: return x
+    if norm(Dfx) < ap:
+      raise newException(ArithmeticDefect, "unstable solution")
+    let xOld = x
+    let fxOld = fx
+    x = x - fx / Dfx
+    if norm(x - xOld) < max(ap, norm(x) * rp): return x
+    fx = f1(x)
+    Dfx = (fx - fxOld) / (x - xOld)
+  raise newException(ArithmeticDefect, "no convergence")
 \end{lstlisting}
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> def f(x): return (x-2) * (x-5)
->>> round(optimize_secant(f, 3.0), 3)
-3.5
+\begin{lstlisting}
+proc f(x: float): float = (x - 2.0) * (x - 5.0)
+echo formatFloat(optimizeSecant(f, 3.0), ffDecimal, 3)
+# 3.500
 \end{lstlisting}
 
 \goodbreak\subsection{Golden section search}
@@ -7280,33 +7281,33 @@ def optimize_secant(f, x, ap=1e-6, rp=1e-4, ns=100):
 
 If the function we want to optimize is continuous but not differentiable, then the previous algorithms do not work. In this case, there is one algorithm that comes to our rescue, the golden section~\cite{golden} search. It is similar to the bisection method, with one caveat; in the bisection method, at each point, we need to know if a function changes sign in between two points, therefore two points are all we need. If instead we are looking for a max or min, we need to know if the function is concave or convex in between those two points. This requires one extra point in between the two. So while the bisection method only needs one point in between $[a, b]$, the golden search needs two points, $x_1$ and $x_2$, in between $[a, b]$, and from them it can determine whether the extreme is in $[a, x_2]$ or in $[x_1, b]$. This is also represented pictorially in fig.~\ref{golden-pic}. The two points are chosen in an optimal way so that at the next iteration, one of the two points can be recycled by leaving the ratio between $x_1-a$ and $b-x_2$ fixed and equal to 1:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def optimize_golden_search(f, a, b, ap=1e-6, rp=1e-4, ns=100):
-    a, b=float(a), float(b)
-    tau = (sqrt(5.0)-1.0)/2.0
-    x1, x2 = a+(1.0-tau) * (b-a), a+tau * (b-a)
-    fa, f1, f2, fb = f(a), f(x1), f(x2), f(b)
-    for k in range(ns):
-        if f1 > f2:
-            a, fa, x1, f1 = x1, f1, x2, f2
-            x2 = a+tau * (b-a)
-            f2 = f(x2)
-        else:
-            b, fb, x2, f2 = x2, f2, x1, f1
-            x1 = a+(1.0-tau) * (b-a)
-            f1 = f(x1)
-        if k>2 and norm(b-a)<max(ap, norm(b) * rp): return b
-    raise ArithmeticError("no convergence")
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc optimizeGoldenSearch*(f: proc(x: float): float, a0, b0: float,
+                           ap = 1e-6, rp = 1e-4, ns = 100): float =
+  var a = a0
+  var b = b0
+  let tau = (sqrt(5.0) - 1.0) / 2.0
+  var x1 = a + (1.0 - tau) * (b - a)
+  var x2 = a + tau * (b - a)
+  var fa = f(a); var f1 = f(x1); var f2 = f(x2); var fb = f(b)
+  for k in 0 ..< ns:
+    if f1 > f2:
+      a = x1; fa = f1; x1 = x2; f1 = f2
+      x2 = a + tau * (b - a); f2 = f(x2)
+    else:
+      b = x2; fb = f2; x2 = x1; f2 = f1
+      x1 = a + (1.0 - tau) * (b - a); f1 = f(x1)
+    if k > 2 and norm(b - a) < max(ap, norm(b) * rp): return b
+  raise newException(ArithmeticDefect, "no convergence")
 \end{lstlisting}
 
 Here is an example:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> def f(x): return (x-2) * (x-5)
->>> round(optimize_golden_search(f, 2.0, 5.0), 3)
-3.5
+\begin{lstlisting}
+proc f(x: float): float = (x - 2.0) * (x - 5.0)
+echo formatFloat(optimizeGoldenSearch(f, 2.0, 5.0), ffDecimal, 3)
+# 3.500
 \end{lstlisting}
 
 \begin{figure}[ht]
@@ -7327,35 +7328,45 @@ where $\mathbf{h}_i$ is a vector with components all equal to zero but $h_i = h 
 
 We can implement it as follows:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def partial(f, i, h=1e-4):
-    def df(x, f=f, i=i, h=h):
-        x = list(x)  # make copy of x
-        x[i] += h
-        f_plus = f(x)
-        x[i] -= 2 * h
-        f_minus = f(x)
-        if isinstance(f_plus, (list, tuple)):
-            return [(f_plus[i]-f_minus[i])/(2 * h) for i in range(len(f_plus))]
-        else:
-            return (f_plus-f_minus)/(2 * h)
-    return df
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc partial*(f: proc(x: seq[float]): float, i: int, h = 1e-4):
+              proc(x: seq[float]): float =
+  result = proc(x: seq[float]): float =
+    var x = x
+    x[i] += h
+    let fPlus = f(x)
+    x[i] -= 2.0 * h
+    let fMinus = f(x)
+    (fPlus - fMinus) / (2.0 * h)
+
+proc partial*(f: proc(x: seq[float]): seq[float], i: int, h = 1e-4):
+              proc(x: seq[float]): seq[float] =
+  result = proc(x: seq[float]): seq[float] =
+    var x = x
+    x[i] += h
+    let fPlus = f(x)
+    x[i] -= 2.0 * h
+    let fMinus = f(x)
+    result = newSeq[float](fPlus.len)
+    for k in 0 ..< fPlus.len:
+      result[k] = (fPlus[k] - fMinus[k]) / (2.0 * h)
 \end{lstlisting}
 
 Similarly to {\ft D(f)}, we have implemented it in such a way that {\ft partial(f, i)} returns a function that can be evaluated at any point $x$. Also notice that the function $f$ may return a scalar, a matrix, a list, or a tuple. The {\ft if} condition allows the function to deal with the difference between two lists or tuples.
 
 Here is an example:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> def f(x): return 2.0 * x[0]+3.0 * x[1]+5.0 * x[1] * x[2]
->>> df0 = partial(f, 0)
->>> df1 = partial(f, 1)
->>> df2 = partial(f, 2)
->>> x = (1, 1, 1)
->>> round(df0(x), 4), round(df1(x), 4), round(df2(x), 4)
-(2.0, 8.0, 5.0)
+\begin{lstlisting}
+proc f(x: seq[float]): float = 2.0*x[0] + 3.0*x[1] + 5.0*x[1]*x[2]
+let df0 = partial(f, 0)
+let df1 = partial(f, 1)
+let df2 = partial(f, 2)
+let x = @[1.0, 1.0, 1.0]
+echo (formatFloat(df0(x), ffDecimal, 4),
+      formatFloat(df1(x), ffDecimal, 4),
+      formatFloat(df2(x), ffDecimal, 4))
+# ("2.0000", "8.0000", "5.0000")
 \end{lstlisting}
 
 \goodbreak\subsection{Jacobian, gradient, and Hessian}
@@ -7414,24 +7425,27 @@ $\partial^2 f(x)/\partial x_2\partial x_2$ &
 
 Given the definition of partial, we can compute the gradient and the Hessian using the two functions
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def gradient(f, x, h=1e-4):
-    return Matrix(len(x), 1, fill=lambda r, c: partial(f, r, h)(x))
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc gradient*(f: proc(x: seq[float]): float,
+               x: seq[float], h = 1e-4): Matrix =
+  newMatrix(x.len, 1,
+    proc(r, c: int): float = partial(f, r, h)(x))
 
-def hessian(f, x, h=1e-4):
-    return Matrix(len(x), len(x), fill=lambda r, c: partial(partial(f, r, h), c, h)(x))
+proc hessian*(f: proc(x: seq[float]): float,
+              x: seq[float], h = 1e-4): Matrix =
+  newMatrix(x.len, x.len,
+    proc(r, c: int): float = partial(partial(f, r, h), c, h)(x))
 \end{lstlisting}
 
 Here is an example:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> def f(x): return 2.0 * x[0]+3.0 * x[1]+5.0 * x[1] * x[2]
->>> print(gradient(f, x=(1, 1, 1)))
-[[1.999999...], [7.999999...], [4.999999...]]
->>> print(hessian(f, x=(1, 1, 1)))
-[[0.0, 0.0, 0.0], [0.0, 0.0, 5.000000...], [0.0, 5.000000..., 0.0]]
+\begin{lstlisting}
+proc f(x: seq[float]): float = 2.0*x[0] + 3.0*x[1] + 5.0*x[1]*x[2]
+echo gradient(f, @[1.0, 1.0, 1.0])
+# @[@[1.999999...], @[7.999999...], @[4.999999...]]
+echo hessian(f, @[1.0, 1.0, 1.0])
+# @[@[0.0, 0.0, 0.0], @[0.0, 0.0, 5.000000...], @[0.0, 5.000000..., 0.0]]
 \end{lstlisting}
 
 When dealing with functions returning multiple values like
@@ -7492,20 +7506,24 @@ $\partial f_2(x)/\partial x_2$ &
 
 which we can implement as follows:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def jacobian(f, x, h=1e-4):
-    partials = [partial(f, c, h)(x) for c in range(len(x))]
-    return Matrix(len(partials[0]), len(x), fill=lambda r, c: partials[c][r])
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc jacobian*(f: proc(x: seq[float]): seq[float],
+               x: seq[float], h = 1e-4): Matrix =
+  var partials: seq[seq[float]] = @[]
+  for c in 0 ..< x.len:
+    partials.add partial(f, c, h)(x)
+  newMatrix(partials[0].len, x.len,
+    proc(r, c: int): float = partials[c][r])
 \end{lstlisting}
 
 Here is an example:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> def f(x): return (2.0 * x[0]+3.0 * x[1]+5.0 * x[1] * x[2], 2.0 * x[0])
->>> print(jacobian(f, x=(1, 1, 1)))
-[[1.9999999..., 7.999999..., 4.9999999...], [1.9999999..., 0.0, 0.0]]
+\begin{lstlisting}
+proc f(x: seq[float]): seq[float] =
+  @[2.0*x[0] + 3.0*x[1] + 5.0*x[1]*x[2], 2.0*x[0]]
+echo jacobian(f, @[1.0, 1.0, 1.0])
+# @[@[1.9999999..., 7.999999..., 4.9999999...], @[1.9999999..., 0.0, 0.0]]
 \end{lstlisting}
 
 \goodbreak\subsection{Newton method (solver)}
@@ -7514,37 +7532,32 @@ Here is an example:
 
 We can now solve eq.~\ref{jacobian2} iteratively as we did for the one-dimensional Newton solver with only one change---the first derivative of $f$ is replaced by the Jacobian:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def solve_newton_multi(f, x, ap=1e-6, rp=1e-4, ns=20):
-    """
-    Computes the root of a multidimensional function f near point x.
-
-    Parameters
-    f is a function that takes a list and returns a scalar
-    x is a list
-
-    Returns x, solution of f(x)=0, as a list
-    """
-    n = len(x)
-    x = Matrix(len(x))
-    for k in range(ns):
-        fx = Matrix(f(x.flatten()))
-        J = jacobian(f, x.flatten())
-        if norm(J) < ap:
-            raise ArithmeticError("unstable solution")
-        (x_old, x) = (x, x-(1.0/J) * fx)
-        if k>2 and norm(x-x_old)<max(ap, norm(x) * rp): return x.flatten()
-    raise ArithmeticError("no convergence")
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc solveNewtonMulti*(f: proc(x: seq[float]): seq[float],
+                       x0: seq[float],
+                       ap = 1e-6, rp = 1e-4, ns = 20): seq[float] =
+  ## Multidimensional Newton solver. Finds `x` such that `f(x) == 0`.
+  var x = newMatrix(x0)
+  for k in 0 ..< ns:
+    let fx = newMatrix(f(x.flatten()))
+    let J = jacobian(f, x.flatten())
+    if norm(J) < ap:
+      raise newException(ArithmeticDefect, "unstable solution")
+    let xOld = x
+    x = x - (1.0 / J) * fx
+    if k > 2 and norm(x - xOld) < max(ap, norm(x) * rp):
+      return x.flatten()
+  raise newException(ArithmeticDefect, "no convergence")
 \end{lstlisting}
 
 Here is an example:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> def f(x): return [x[0]+x[1], x[0]+x[1] ** 2-2]
->>> solve_newton_multi(f, x=(0, 0))
-[1.0..., -1.0...]
+\begin{lstlisting}
+proc f(x: seq[float]): seq[float] =
+  @[x[0] + x[1], x[0] + x[1] ^ 2 - 2.0]
+echo solveNewtonMulti(f, @[0.0, 0.0])
+# @[1.0..., -1.0...]
 \end{lstlisting}
 
 \goodbreak\subsection{Newton method (optimize)}
@@ -7562,68 +7575,65 @@ set its derivative to zero, and solve it, thus obtaining
 \end{equation}
 which constitutes the core of the multidimensional Newton optimizer:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def optimize_newton_multi(f, x, ap=1e-6, rp=1e-4, ns=20):
-    """
-    Finds the extreme of multidimensional function f near point x.
-
-    Parameters
-    f is a function that takes a list and returns a scalar
-    x is a list
-
-    Returns x, which maximizes of minimizes f(x)=0, as a list
-    """
-    x = Matrix(list(x))
-    for k in range(ns):
-        (grad, H) = (gradient(f, x.flatten()), hessian(f, x.flatten()))
-        if norm(H) < ap:
-            raise ArithmeticError("unstable solution")
-        (x_old, x) = (x, x-(1.0/H) * grad)
-        if k>2 and norm(x-x_old)<max(ap, norm(x) * rp): return x.flatten()
-    raise ArithmeticError("no convergence")
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc optimizeNewtonMulti*(f: proc(x: seq[float]): float,
+                          x0: seq[float],
+                          ap = 1e-6, rp = 1e-4, ns = 20): seq[float] =
+  ## Multidimensional Newton optimizer. Finds extremum of `f`.
+  var x = newMatrix(x0)
+  for k in 0 ..< ns:
+    let grad = gradient(f, x.flatten())
+    let H = hessian(f, x.flatten())
+    if norm(H) < ap:
+      raise newException(ArithmeticDefect, "unstable solution")
+    let xOld = x
+    x = x - (1.0 / H) * grad
+    if k > 2 and norm(x - xOld) < max(ap, norm(x) * rp):
+      return x.flatten()
+  raise newException(ArithmeticDefect, "no convergence")
 \end{lstlisting}
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> def f(x): return (x[0]-2) ** 2+(x[1]-3) ** 2
->>> optimize_newton_multi(f, x=(0, 0))
-[2.0, 3.0]
+\begin{lstlisting}
+proc f(x: seq[float]): float = (x[0] - 2.0) ^ 2 + (x[1] - 3.0) ^ 2
+echo optimizeNewtonMulti(f, @[0.0, 0.0])
+# @[2.0, 3.0]
 \end{lstlisting}
 
 \goodbreak\subsection{Improved Newton method (optimize)}
 
 We can further improve the Newton multidimensional optimizer by using the following technique. At each step, if the next guess does not reduce the value of $f$, we revert to the previous point, and we perform a one-dimensional Newton optimization along the direction of the gradient. This method greatly increases the stability of the multidimensional Newton optimizer:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def optimize_newton_multi_imporved(f, x, ap=1e-6, rp=1e-4, ns=20, h=10.0):
-    """
-    Finds the extreme of multidimensional function f near point x.
-
-    Parameters
-    f is a function that takes a list and returns a scalar
-    x is a list
-
-    Returns x, which maximizes of minimizes f(x)=0, as a list
-    """
-    x = Matrix(list(x))
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc optimizeNewtonMultiImproved*(
+    f: proc(x: seq[float]): float, x0: seq[float],
+    ap = 1e-6, rp = 1e-4, ns = 20, hStart = 10.0): seq[float] =
+  ## Newton optimizer with line-search fallback to steepest descent.
+  var x = newMatrix(x0)
+  var fx = f(x.flatten())
+  var h = hStart
+  for k in 0 ..< ns:
+    let grad = gradient(f, x.flatten())
+    let H = hessian(f, x.flatten())
+    if norm(H) < ap:
+      raise newException(ArithmeticDefect, "unstable solution")
+    var fxOld = fx
+    var xOld = x
+    x = x - (1.0 / H) * grad
     fx = f(x.flatten())
-    for k in range(ns):
-        (grad, H) = (gradient(f, x.flatten()), hessian(f, x.flatten()))
-        if norm(H) < ap:
-            raise ArithmeticError("unstable solution")
-        (fx_old, x_old, x) = (fx, x, x-(1.0/H) * grad)
-        fx = f(x.flatten())
-        while fx>fx_old:  # revert to steepest descent
-            (fx, x) = (fx_old, x_old)
-            norm_grad = norm(grad)
-            (x_old, x) = (x, x - grad/norm_grad * h)
-            (fx_old, fx) = (fx, f(x.flatten()))
-            h = h/2
-        h = norm(x-x_old) * 2
-        if k>2 and h/2<max(ap, norm(x) * rp): return x.flatten()
-    raise ArithmeticError("no convergence")
+    while fx > fxOld:
+      fx = fxOld; x = xOld
+      let normGrad = norm(grad)
+      xOld = x
+      x = x - grad * (h / normGrad)
+      fxOld = fx
+      fx = f(x.flatten())
+      h = h / 2.0
+    h = norm(x - xOld) * 2.0
+    if k > 2 and h / 2.0 < max(ap, norm(x) * rp):
+      return x.flatten()
+  raise newException(ArithmeticDefect, "no convergence")
 \end{lstlisting}
 
 \goodbreak\section{Nonlinear fitting}
@@ -7705,50 +7715,52 @@ Therefore we have reduced the original problem to a simple problem by reducing t
 
 The following code takes as input the {\ft data} as a list of $(x_i, y_i, \delta y_i)$, a list of functions (or a single function), and a guess for the $\mathbf{b}$ values. If the {\ft fs} argument is not a list but a single function, then there is no $\mathbf{a}$ to compute, and the function proceeds by minimizing the $\chi^2$ using the improved Newton optimizer (the one-dimensional or the improved multidimensional one, as appropriate). If the argument $\mathbf{b}$ is missing, then the fitting parameters are all linear, and the algorithm reverts to regular linear least squares. Otherwise, run the more complex algorithm described earlier:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def fit(data, fs, b=None, ap=1e-6, rp=1e-4, ns=200, constraint=None):
-    if not isinstance(fs, (list, tuple)):
-        def g(b, data=data, f=fs, constraint=constraint):
-            chi2 = sum(((y-f(b, x))/dy) ** 2 for (x, y, dy) in data)
-            if constraint: chi2+=constraint(b)
-            return chi2
-        if isinstance(b, (list, tuple)):
-            b = optimize_newton_multi_imporved(g, b, ap, rp, ns)
-        else:
-            b = optimize_newton(g, b, ap, rp, ns)
-        return b, g(b, data, constraint=None)
-    elif not b:
-        a, chi2, ff = fit_least_squares(data, fs)
-        return a, chi2
-    else:
-        na = len(fs)
-        def core(b, data=data, fs=fs):
-            A = Matrix([[fs[k](b, x)/dy for k in range(na)] \
-                                  for (x, y, dy) in data])
-            z = Matrix([[y/dy] for (x, y, dy) in data])
-            a = (1/(A.T * A)) * (A.T * z)
-            chi2 = norm(A * a-z) ** 2
-            return a.flatten(), chi2
-        def g(b, data=data, fs=fs, constraint=constraint):
-            a, chi2 = core(b, data, fs)
-            if constraint:
-                chi += constraint(b)
-            return chi2
-        b = optimize_newton_multi_imporved(g, b, ap, rp, ns)
-        a, chi2 = core(b, data, fs)
-        return a+b, chi2
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+type
+  NonlinearFit* = proc(b: seq[float], x: float): float
+
+proc fit*(data: seq[(float, float, float)],
+          fs: seq[NonlinearFit],
+          b0: seq[float],
+          ap = 1e-6, rp = 1e-4, ns = 200,
+          constraint: proc(b: seq[float]): float = nil
+          ): (seq[float], float) =
+  ## Generic linear/nonlinear chi^2 fit. Returns (parameters, chi2).
+  let na = fs.len
+  proc core(b: seq[float]): (seq[float], float) =
+    let A = newMatrix(data.len, na,
+      proc(r, c: int): float = fs[c](b, data[r][0]) / data[r][2])
+    let z = newMatrix(data.len, 1,
+      proc(r, c: int): float = data[r][1] / data[r][2])
+    let a = (1.0 / (A.T * A)) * (A.T * z)
+    let chi2Val = norm(A * a - z) ^ 2
+    (a.flatten(), chi2Val)
+  proc g(b: seq[float]): float =
+    let (_, chi2v) = core(b)
+    var s = chi2v
+    if constraint != nil: s += constraint(b)
+    s
+  let b = optimizeNewtonMultiImproved(g, b0, ap, rp, ns)
+  let (a, chi2v) = core(b)
+  (a & b, chi2v)
 \end{lstlisting}
 
 Here is an example:
 
-%%% META:FILE:nlib.py
 \begin{lstlisting}
->>> data = [(i, i+2.0 * i ** 2+300.0/(i+10), 2.0) for i in range(1, 10)]
->>> fs = [(lambda b, x: x), (lambda b, x: x * x), (lambda b, x: 1.0/(x+b[0]))]
->>> ab, chi2 = fit(data, fs, [5])
->>> print(ab, chi2)
-[0.999..., 2.000..., 300.000..., 10.000...] ...
+var data: seq[(float, float, float)] = @[]
+for i in 1 ..< 10:
+  let fi = float(i)
+  data.add (fi, fi + 2.0 * fi^2 + 300.0 / (fi + 10.0), 2.0)
+let fs: seq[NonlinearFit] = @[
+  proc(b: seq[float], x: float): float = x,
+  proc(b: seq[float], x: float): float = x * x,
+  proc(b: seq[float], x: float): float = 1.0 / (x + b[0]),
+]
+let (ab, chi2) = fit(data, fs, @[5.0])
+echo ab, " ", chi2
+# @[0.999..., 2.000..., 300.000..., 10.000...] ...
 \end{lstlisting}
 
 \index{a priori}\index{Bayesian statistics}
@@ -7757,8 +7769,9 @@ In the preceding implementation, we added a somewhat mysterious argument {\ft co
 
 For example, if we know that $b_i$ must be close to some $\bar b_i$ with some uncertainty $\delta b_i$, then we can use
 \begin{lstlisting}
-def constraint(b, bar_b, delta_b):
-    return sum(((b[i]-bar_b[i])/delta_b[i]) ** 2 for i in range(len(b)))
+proc constraint(b, barB, deltaB: seq[float]): float =
+  for i in 0 ..< b.len:
+    result += ((b[i] - barB[i]) / deltaB[i]) ^ 2
 \end{lstlisting}
 
 and pass the preceding function as a constraint.
@@ -7799,51 +7812,41 @@ If a function is discontinuous only in a finite number of points in the domain $
 
 We can implement the naive integration as a function of $N$ as follows:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def integrate_naive(f, a, b, n=20):
-    """
-    Integrates function, f, from a to b using the trapezoidal rule
-    >>> from math import sin
-    >>> integrate(sin, 0, 2)
-    1.416118...
-    """
-    a, b= float(a), float(b)
-    h = (b-a)/n
-    return h/2 * (f(a)+f(b))+h * sum(f(a+h * i) for i in range(1, n))
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc integrateNaive*(f: proc(x: float): float,
+                     a, b: float, n = 20): float =
+  ## Trapezoidal-rule integration of `f` over `[a, b]` with `n` slices.
+  let h = (b - a) / float(n)
+  result = h / 2.0 * (f(a) + f(b))
+  for i in 1 ..< n:
+    result += h * f(a + h * float(i))
 \end{lstlisting}
 
 And here we implement the limit by doubling the number of points until convergence is achieved:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def integrate(f, a, b, ap=1e-4, rp=1e-4, ns=20):
-    """
-    Integrates function, f, from a to b using the trapezoidal rule
-    converges to precision
-    """
-    I = integrate_naive(f, a, b, 1)
-    for k in range(1, ns):
-        I_old, I = I, integrate_naive(f, a, b, 2 ** k)
-        if k>2 and norm(I-I_old)<max(ap, norm(I) * rp): return I
-    raise ArithmeticError("no convergence")
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc integrate*(f: proc(x: float): float, a, b: float,
+                ap = 1e-4, rp = 1e-4, ns = 20): float =
+  ## Iteratively-refined trapezoidal integration.
+  var I = integrateNaive(f, a, b, 1)
+  for k in 1 ..< ns:
+    let IOld = I
+    I = integrateNaive(f, a, b, 2 ^ k)
+    if k > 2 and norm(I - IOld) < max(ap, norm(I) * rp):
+      return I
+  raise newException(ArithmeticDefect, "no convergence")
 \end{lstlisting}
 
 We can test the convergence as follows:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> from math import sin, cos
->>> integrate_naive(sin, 0, 3, n=2)
-1.6020...
->>> integrate_naive(sin, 0, 3, n=4)
-1.8958...
->>> integrate_naive(sin, 0, 3, n=8)
-1.9666...
->>> integrate(sin, 0, 3)
-1.9899...
->>> 1.0-cos(3)
-1.9899...
+\begin{lstlisting}
+echo integrateNaive(sin, 0.0, 3.0, n = 2)   # 1.6020...
+echo integrateNaive(sin, 0.0, 3.0, n = 4)   # 1.8958...
+echo integrateNaive(sin, 0.0, 3.0, n = 8)   # 1.9666...
+echo integrate(sin, 0.0, 3.0)               # 1.9899...
+echo 1.0 - cos(3.0)                         # 1.9899...
 \end{lstlisting}
 
 \goodbreak\subsection{Quadrature}
@@ -7863,43 +7866,43 @@ where $c_i$ are coefficients to be determined:
 
 \index{class!QuadratureIntegrator}
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-class QuadratureIntegrator:
-    """
-    Calculates the integral of the function f from points a to b
-    using n Vandermonde weights and numerical quadrature.
-    """
-    def __init__(self, order=4):
-        h =1.0/(order-1)
-        A = Matrix(order, order, fill = lambda r, c: (c * h) ** r)
-        s = Matrix(order, 1, fill = lambda r, c: 1.0/(r+1))
-        w = (1/A) * s
-        self.w = w
-    def integrate(self, f, a, b):
-        w = self.w
-        order = len(w.rows)
-        h = float(b-a)/(order-1)
-        return (b-a) * sum(w[i, 0] * f(a+i * h) for i in range(order))
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+type
+  QuadratureIntegrator* = ref object
+    w*: Matrix
 
-def integrate_quadrature_naive(f, a, b, n=20, order=4):
-    a, b = float(a), float(b)
-    h = float(b-a)/n
-    q = QuadratureIntegrator(order=order)
-    return sum(q.integrate(f, a+i * h, a+i * h+h) for i in range(n))
+proc newQuadratureIntegrator*(order = 4): QuadratureIntegrator =
+  let h = 1.0 / float(order - 1)
+  let A = newMatrix(order, order,
+    proc(r, c: int): float = (float(c) * h) ^ r)
+  let s = newMatrix(order, 1,
+    proc(r, c: int): float = 1.0 / float(r + 1))
+  result = QuadratureIntegrator(w: (1.0 / A) * s)
+
+proc integrate*(q: QuadratureIntegrator,
+                f: proc(x: float): float, a, b: float): float =
+  let order = q.w.nrows
+  let h = (b - a) / float(order - 1)
+  for i in 0 ..< order:
+    result += q.w[i, 0] * f(a + float(i) * h)
+  result *= (b - a)
+
+proc integrateQuadratureNaive*(f: proc(x: float): float,
+                               a, b: float, n = 20, order = 4): float =
+  let h = (b - a) / float(n)
+  let q = newQuadratureIntegrator(order = order)
+  for i in 0 ..< n:
+    result += q.integrate(f, a + float(i) * h,
+                            a + float(i) * h + h)
 \end{lstlisting}
 
 Here is an example of usage:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> from math import sin
->>> integrate_quadrature_naive(sin, 0, 3, n=2, order=2)
-1.602...
->>> integrate_quadrature_naive(sin, 0, 3, n=2, order=3)
-1.993...
->>> integrate_quadrature_naive(sin, 0, 3, n=2, order=4)
-1.991...
+\begin{lstlisting}
+echo integrateQuadratureNaive(sin, 0.0, 3.0, n = 2, order = 2) # 1.602...
+echo integrateQuadratureNaive(sin, 0.0, 3.0, n = 2, order = 3) # 1.993...
+echo integrateQuadratureNaive(sin, 0.0, 3.0, n = 2, order = 4) # 1.991...
 \end{lstlisting}
 
 \newpage
@@ -7975,25 +7978,35 @@ The transformation from $\mathbf{u}$ to $\mathbf{v}$, and vice versa, is a linea
 From the definition, and without attempting any optimization, we can implement these operators as follows:
 
 \begin{lstlisting}
-def transform(u, b):
-    return [sum(u[k] * bi[k] for k in range(len(u))) for bi in b]
+proc transform(u: seq[float], b: seq[seq[float]]): seq[float] =
+  for bi in b:
+    var s = 0.0
+    for k in 0 ..< u.len: s += u[k] * bi[k]
+    result.add s
 
-def antitransform(v, b):
-    return [sum(v[i] * bi[k] for i, bi in enumerate(b)) for k in range(len(v))]
+proc antitransform(v: seq[float], b: seq[seq[float]]): seq[float] =
+  result = newSeq[float](v.len)
+  for k in 0 ..< v.len:
+    var s = 0.0
+    for i, bi in b: s += v[i] * bi[k]
+    result[k] = s
 \end{lstlisting}
 
 Here is an example of usage:
 
 \begin{lstlisting}
->>> def make_basis(N):
->>>     return [[1 if i == j else 0 for i in range(N)] for j in range(N)]
->>> b = make_basis(4)
->>> b
-[[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
->>> u = [1.0, 2.0, 3.0, 4.0]
->>> v = transform(u, b)
->>> antitransform(v, b)
-[1.0, 2.0, 3.0, 4.0]
+proc makeBasis(N: int): seq[seq[float]] =
+  for j in 0 ..< N:
+    var row = newSeq[float](N)
+    row[j] = 1.0
+    result.add row
+let b = makeBasis(4)
+echo b
+# @[@[1.0, 0.0, 0.0, 0.0], @[0.0, 1.0, 0.0, 0.0], ...]
+let u = @[1.0, 2.0, 3.0, 4.0]
+let v = transform(u, b)
+echo antitransform(v, b)
+# @[1.0, 2.0, 3.0, 4.0]
 \end{lstlisting}
 
 Of course, this example is trivial because of the choice of basis which makes $v$ the same as $u$. Yet our argument works for any basis $\mathbf{b}_i$. In particular, we can make the following choice:
@@ -8016,15 +8029,21 @@ and they take the names of Fourier transform and anti-transform~\cite{fourier}, 
 we can implement them as follows:
 
 \begin{lstlisting}
-from cmath import exp as cexp
+import std/complex
 
-def fourier(u, sign=1):
-    N, D = len(u), range(len(u))
-    coeff, omega = 1.0/sqrt(N), 2.0 * pi * sign * (1j)/N
-    return [sum(coeff * u[i] * cexp(omega * i * j) for i in D) for j in D]
+proc fourier(u: seq[Complex64], sign = 1): seq[Complex64] =
+  let N = u.len
+  let coeff = 1.0 / sqrt(float(N))
+  let omega = complex(0.0, 2.0 * PI * float(sign) / float(N))
+  result = newSeq[Complex64](N)
+  for j in 0 ..< N:
+    var s = complex(0.0, 0.0)
+    for i in 0 ..< N:
+      s = s + complex(coeff, 0.0) * u[i] *
+              exp(omega * complex(float(i * j), 0.0))
+    result[j] = s
 
-def anti_fourier(v):
-    return fourier(v, sign=-1)
+proc antiFourier(v: seq[Complex64]): seq[Complex64] = fourier(v, sign = -1)
 \end{lstlisting}
 
 Here $1j$ is the Python notation for $I$ and $cexp$ is the exponential function for complex numbers.
@@ -8051,24 +8070,30 @@ The preceding recursive expression can be implemented using dynamic programming,
 
 
 \begin{lstlisting}
-from cmath import exp as cexp
+import std/complex
 
-def fast_fourier(u, sign=1):
-    N, sqrtN, D = len(u), sqrt(len(u)), range(len(u))
-    v = [ui/sqrtN for ui in u]
-    k = N/2
-    while k:
-        omega = cexp(2.0 * pi * 1j * k/N)
-        for i in D:
-            j = i ^ k
-            if i < k:
-                ik, jk = int(i/k), int(j/k)
-                v[i], v[j] = v[i]+(omega ** ik) * v[j], v[i]+(omega ** jk) * v[j]
-        k/=2
-    return v
+proc fastFourier(u: seq[Complex64], sign = 1): seq[Complex64] =
+  let N = u.len
+  let sqrtN = sqrt(float(N))
+  result = newSeq[Complex64](N)
+  for i in 0 ..< N:
+    result[i] = u[i] / complex(sqrtN, 0.0)
+  var k = N div 2
+  while k > 0:
+    let omega = exp(complex(0.0, 2.0 * PI * float(sign * k) / float(N)))
+    for i in 0 ..< N:
+      let j = i xor k
+      if i < k:
+        let ik = i div k
+        let jk = j div k
+        let vi = result[i]
+        let vj = result[j]
+        result[i] = vi + pow(omega, complex(float(ik), 0.0)) * vj
+        result[j] = vi + pow(omega, complex(float(jk), 0.0)) * vj
+    k = k div 2
 
-def fast_anti_fourier(v):
-    return fast_fourier(v, sign=-1)
+proc fastAntiFourier(v: seq[Complex64]): seq[Complex64] =
+  fastFourier(v, sign = -1)
 \end{lstlisting}
 
 This implementation of the Fourier transform is equivalent to the previous one in the sense that it produces the same result (up to numerical issues), but it is faster as it runs in $\Theta(N \log_2 N)$ versus $\Theta(N^2)$ of the naive implementation. Here \verb!i ^ j!
