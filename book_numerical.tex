@@ -8,8 +8,8 @@
 % - rewrite Matrix
 % - dimensional analysis
 
-\title{\LARGE Annotated Algorithms in Python}
-\subtitle{With Applications in Physics, Biology, Finance (3rd Ed.)}
+\title{\LARGE Annotated Algorithms in Python\\[0.5em]
+       \large With Applications in Physics, Biology, Finance (3rd Ed.)}
 
 \author{Massimo Di Pierro}
 \publisher{Experts4Solutions}
@@ -173,7 +173,7 @@ We take an interdisciplinary approach by providing examples in finance, physics,
 
 Almost all of the algorithms written in this book can be found in the {\ft nlib} github repository:
 
-\url{https://github.com/mdipierro/nlib}
+\url{https://github.com/mdipierro/nim_nlib}
 
 \section{Main Ideas}
 
@@ -223,7 +223,7 @@ In the ultimate analysis, we can even try to understand ourselves as a parallel 
 
 The programming language used in this book is Python~\cite{python} version 3.8. This is because Python algorithms are very similar to the corresponding pseudo-code, and therefore this language is easy to read and understand compared to other languages such as C++ or Java. Moreover, Python is a popular language in many Universities and Companies (including Google).
 
-The goal of the book is to explain the algorithms by building them from scratch. It is not our goal to teach the user about existing libraries that may be (and often are) faster than our implementation. Two notable examples are NumPy~\cite{numpy} and SciPy~\cite{scipy}. These libraries provide a Python interface to the BLAS and LaPack libraries for linear algebra and applications. Although we wholeheartedly recommend using them when developing production code, we believe they are not appropriate for teaching the algorithms themselves because those algorithms are written in C, FORTRAN, and assembly languages and are not easy to read.
+The goal of the book is to explain the algorithms by building them from scratch. It is not our goal to teach the user about existing libraries that may be (and often are) faster than our implementation.
 
 \section{Book Structure}
 
@@ -247,14 +247,13 @@ This book is divided into the following chapters:
 We utilize the following software libraries developed by the author and available under an Open Source BSD License:
 
 \begin{itemize}
-\item \url{http://github.com/mdipierro/nlib}
+\item \url{https://github.com/mdipierro/nim_nlib}
 \item \url{http://github.com/mdipierro/buckingham}
 \end{itemize}
 
 We also utilize the following third party libraries:
 
 \begin{itemize}
-\item \url{http://www.numpy.org/}
 \item \url{http://matplotlib.org/}
 \item \url{https://github.com/ziyuang/mincemeatpy}
 \item \url{https://pypi.org/project/pyopencl/}
@@ -1968,101 +1967,6 @@ where ``some/key'' must be a string and ``some value'' can be any Python picklea
 \end{lstlisting}
 \end{itemize}
 
-\goodbreak\subsection{{\ft numpy}}
-
-The library {\ft numpy}~\cite{numpy} is the Python library for efficient arrays, multidimensional arrays, and their manipulation. {\ft numpy} does not ship with Python and must be installed separately.
-
-On most platforms, this is as easy as typing in the Bash Shell:
-\begin{lstlisting}
-pip install numpy
-\end{lstlisting}
-Yet on other platforms, it can be a more lengthy process, and we leave it to the reader to find the best installation procedure.
-
-The basic object in {\ft numpy} is the {\ft ndarray} ($n$-dimensional array). Here we make a $10\times 4\times 3$ array of 64 bits float:
-
-\begin{lstlisting}
->>> import numpy
->>> a = numpy.ndarray((10, 4, 3), dtype=numpy.float64)
-\end{lstlisting}
-
-The class {\ft ndarray} is more efficient than Python"s list. It takes much less space because their elements have a fixed given type (e.g., {\ft float64}). Other popular available types are: int8, int16, int32, int64, uint8, uint16, uint32, uint64, float16, float32, float64, complex64, and complex128.
-
-We can access elements:
-
-\begin{lstlisting}
->>> a[0, 0, 0] = 1
->>> a[0, 0, 0]
-1.0
-\end{lstlisting}
-
-We can query for its size:
-
-\begin{lstlisting}
->>> a.shape
-(10, 4, 3)
-\end{lstlisting}
-
-We can reshape its elements:
-
-\begin{lstlisting}
->>> b = a.reshape((10, 12))
->>> a.shape
-(10, 12)
-\end{lstlisting}
-
-We can map one type into another
-\begin{lstlisting}
->>> c = b.astype(float32)
-\end{lstlisting}
-
-We can load and save them:
-
-\begin{lstlisting}
->>> numpy.save("array.np", a)
->>> b = numpy.load("array.np")
-\end{lstlisting}
-
-And we can perform operations on them (most operations are element-wise operations):
-
-\begin{lstlisting}
->>> a = numpy.array([[1, 2], [3, 4]])  # converts a list into a ndarray
->>> a
-[[1 2]
- [3 4]]
->>> a+1
-[[2 3]
- [4 5]]
->>> a+a
-[[2 4]
- [6 8]]
->>> a * 2
-[[2 4]
- [6 8]]
->>> a * a
-[[ 1  4]
- [ 9 16]]
->>> numpy.exp(a)
-[[  2.71828183   7.3890561 ]
- [ 20.08553692  54.59815003]]
-\end{lstlisting}
-
-The {\ft numpy} module also implements common linear algebra operations:
-
-\begin{lstlisting}
->>> from numpy import dot
->>> from numpy.linalg import inv
->>> dot(a, a)
-[[ 7 10]
- [15 22]]
->>> inv(a)
-[[-2.   1. ]
- [ 1.5 -0.5]]
-\end{lstlisting}
-
-These operations are particularly efficient because they are implemented on top of the BLAS and LaPack libraries.
-
-There are many other functions in the {\ft numpy} module, and you can read more about it in the official documentation.
-
 \goodbreak\subsection{{\ft matplotlib}}
 
 \index{matplotlib}\index{plot}\index{hist}\index{scatter}\index{color2d}
@@ -2073,7 +1977,6 @@ You can install {\ft matplotlib} with
 \begin{lstlisting}
 pip install matplotlib
 \end{lstlisting}
-and it requires {\ft numpy}.
 In {\ft matplotlib}, we need to distinguish the following objects:
 \begin{itemize}
 \item {\ft Figure}: a blank grid that can contain pairs of $XY$ axes
@@ -2315,22 +2218,24 @@ The {\it insertion sort} is a simple algorithm in which an array of elements is 
 The insertion sort works by iterating. Every iteration $i$ of the insertion sort removes one element from the input data and inserts it into the correct position in the already-sorted subarray {\ft A[j]} for $0 \le j < i$. The algorithm iterates $n$ times (where $n$ is the total size of the input array) until no input elements remain to be sorted:
 
 \begin{lstlisting}
-def insertion_sort(A):
-    for i in range(1, len(A)):
-        for j in range(i, 0, -1):
-            if A[j]<A[j-1]:
-                A[j], A[j-1] = A[j-1], A[j]
-            else: break
+proc insertionSort[T](a: var seq[T]) =
+  for i in 1 ..< a.len:
+    var j = i
+    while j > 0 and a[j] < a[j-1]:
+      swap(a[j], a[j-1])
+      dec j
 \end{lstlisting}
 
 Here is an example:
 
 \begin{lstlisting}
->>> import random
->>> a=[random.randint(0, 100) for k in range(20)]
->>> insertion_sort(a)
->>> a
-[6, 8, 9, 17, 30, 31, 45, 48, 49, 56, 56, 57, 65, 66, 75, 75, 82, 89, 90, 99]
+import std/random
+randomize()
+var a = newSeq[int](20)
+for i in 0 ..< 20: a[i] = rand(100)
+insertionSort(a)
+echo a
+# @[6, 8, 9, 17, 30, 31, 45, 48, 49, 56, 56, 57, 65, 66, 75, 75, 82, 89, 90, 99]
 \end{lstlisting}
 
 One important question is, how long does this algorithm take to run? How does its running time scale with the input size?
@@ -2433,12 +2338,11 @@ The procedure for computing the worst and best running times is similar. It is s
 
 Consider the following algorithm, which finds the minimum of an array or list A:
 \begin{lstlisting}
-def find_minimum(A):
-    minimum = a[0]
-    for element in A:
-        if element < minimum:
-            minimum = element
-    return minimum
+proc findMinimum[T](a: openArray[T]): T =
+  result = a[0]
+  for element in a:
+    if element < result:
+      result = element
 \end{lstlisting}
 
 
@@ -2468,9 +2372,9 @@ For a loop iteration that does not contain further loops, the time it takes to c
 Here is the simplest example:
 
 \begin{lstlisting}
-def loop0(n):
-    for i in range(0, n):
-        print(i)
+proc loop0(n: int) =
+  for i in 0 ..< n:
+    echo i
 \end{lstlisting}
 
 which we can map into
@@ -2483,9 +2387,9 @@ T(n)=\sum_{i=0}^{i<n}1=n\in \Theta (n)\Rightarrow \text{{\ft loop0}}\in
 Here is a similar example where we have a single loop (corresponding to a single sum) that loops $n^2$ times:
 
 \begin{lstlisting}
-def loop1(n):
-    for i in range(0, n * n):
-        print(i)
+proc loop1(n: int) =
+  for i in 0 ..< n * n:
+    echo i
 \end{lstlisting}
 
 and here is the corresponding running time formula:
@@ -2498,10 +2402,10 @@ T(n)=\sum_{i=0}^{i<n^2}1=n^2\in \Theta (n^2)\Rightarrow \text{{\tt loop1}}%
 The following provides an example of nested loops:
 
 \begin{lstlisting}
-def loop2(n):
-    for i in range(0, n):
-        for j in range(0, n):
-            print(i, j)
+proc loop2(n: int) =
+  for i in 0 ..< n:
+    for j in 0 ..< n:
+      echo i, " ", j
 \end{lstlisting}
 
 Here the time for the inner loop is directly determined by $n$ and does not depend on the outer loop"s counter; therefore
@@ -2514,10 +2418,10 @@ T(n)=\sum_{i=0}^{i<n}\sum_{j=0}^{j<n}1=\sum_{i=0}^{i<n}n=n^2+...\in \Theta
 This is not always the case. In the following code, the inner loop does depend on the value of the outer loop:
 
 \begin{lstlisting}
-def loop3(n):
-    for i in range(0, n):
-        for j in range(0, i):
-            print(i, j)
+proc loop3(n: int) =
+  for i in 0 ..< n:
+    for j in 0 ..< i:
+      echo i, " ", j
 \end{lstlisting}
 
 Therefore, when we write its running time in terms of a sum, care must be taken that the upper limit of the inner sum is the upper limit of the outer sum:
@@ -2533,10 +2437,10 @@ Here is one more example falling in the same category, although the inner loop d
 
 \subsubsection{Example: loop4}
 \begin{lstlisting}
-def loop4(n):
-    for i in range(0, n):
-        for j in range(0, i * i):
-            print(i, j)
+proc loop4(n: int) =
+  for i in 0 ..< n:
+    for j in 0 ..< i * i:
+      echo i, " ", j
 \end{lstlisting}
 
 Therefore the formula for the running time is more complicated:
@@ -2551,11 +2455,11 @@ If the algorithm does not contain nested loops, then we need to compute the runn
 
 \subsubsection{Example: concatenate0}
 \begin{lstlisting}
-def concatenate0(n):
-    for i in range(n * n):
-        print(i)
-    for j in range(n * n * n):
-        print(j)
+proc concatenate0(n: int) =
+  for i in 0 ..< n * n:
+    echo i
+  for j in 0 ..< n * n * n:
+    echo j
 \end{lstlisting}
 
 \begin{equation}
@@ -2566,13 +2470,13 @@ T(n)=\Theta (\max (n^2, n^3))\Rightarrow \text{{\tt concatenate0}}\in \Theta
 If there is an if statement, we need to compute the running time for each condition and pick the maximum when computing the worst running time, or the minimum for the best running time:
 
 \begin{lstlisting}
-def concatenate1(n):
-    if a<0:
-        for i in range(n * n):
-            print(i)
-    else:
-        for j in range(n * n * n):
-            print(j)
+proc concatenate1(n: int, a: int) =
+  if a < 0:
+    for i in 0 ..< n * n:
+      echo i
+  else:
+    for j in 0 ..< n * n * n:
+      echo j
 \end{lstlisting}
 
 \begin{equation}
@@ -2615,34 +2519,31 @@ If the input array has a length greater than 1, it divides the array into two su
 Consider the following Python implementation of the merge sort:
 
 \begin{lstlisting}
-def mergesort(A, p=0, r=None):
-    if r is None: r = len(A)
-    if p<r-1:
-        q = int((p+r)/2)
-        mergesort(A, p, q)
-        mergesort(A, q, r)
-        merge(A, p, q, r)
+proc merge[T](a: var seq[T], p, q, r: int) =
+  var b: seq[T] = @[]
+  var i = p
+  var j = q
+  while true:
+    if a[i] <= a[j]:
+      b.add a[i]; inc i
+    else:
+      b.add a[j]; inc j
+    if i == q:
+      while j < r: b.add a[j]; inc j
+      break
+    if j == r:
+      while i < q: b.add a[i]; inc i
+      break
+  for k in 0 ..< b.len:
+    a[p + k] = b[k]
 
-def merge(A, p, q, r):
-    B, i, j = [], p, q
-    while True:
-        if A[i]<=A[j]:
-            B.append(A[i])
-            i=i+1
-        else:
-            B.append(A[j])
-            j=j+1
-        if i == q:
-            while j<r:
-                B.append(A[j])
-                j=j+1
-            break
-        if j == r:
-            while i<q:
-                B.append(A[i])
-                i=i+1
-            break
-    A[p:r]=B
+proc mergesort*[T](a: var seq[T], p = 0, r = -1) =
+  let r = if r < 0: a.len else: r
+  if p < r - 1:
+    let q = (p + r) div 2
+    mergesort(a, p, q)
+    mergesort(a, q, r)
+    merge(a, p, q, r)
 \end{lstlisting}
 
 \index{recursion}
@@ -2729,11 +2630,8 @@ the methods described.
 Here are some examples of recursive algorithms and their corresponding recurrence relations with solution:
 
 \begin{lstlisting}
-def factorial1(n):
-    if n == 0:
-        return 1
-    else:
-        return n * factorial1(n-1)
+proc factorial1(n: int): int =
+  if n == 0: 1 else: n * factorial1(n-1)
 \end{lstlisting}
 
 \begin{equation}
@@ -2742,12 +2640,11 @@ T(n)=T(n-1)+1\Rightarrow T(n)\in \Theta (n)\Rightarrow \text{{\tt factorial1}%
 \end{equation}
 
 \begin{lstlisting}
-def recursive0(n):
-    if n == 0:
-        return 1
-    else:
-        loop3(n)
-        return n * n * recursive0(n-1)
+proc recursive0(n: int): int =
+  if n == 0: 1
+  else:
+    loop3(n)
+    n * n * recursive0(n-1)
 \end{lstlisting}
 
 \begin{equation}
@@ -2756,12 +2653,11 @@ recursive0}}\in \Theta (n^3)
 \end{equation}
 
 \begin{lstlisting}
-def recursive1(n):
-    if n == 0:
-        return 1
-    else:
-        loop3(n)
-        return n * recursive1(n-1) * recursive1(n-1)
+proc recursive1(n: int): int =
+  if n == 0: 1
+  else:
+    loop3(n)
+    n * recursive1(n-1) * recursive1(n-1)
 \end{lstlisting}
 
 \begin{equation}
@@ -2770,12 +2666,11 @@ recursive1}}\in \Theta (2^n)
 \end{equation}
 
 \begin{lstlisting}
-def recursive2(n):
-    if n == 0:
-        return 1
-    else:
-        a=factorial0(n)
-        return a * recursive2(n/2) * recursive1(n/2)
+proc recursive2(n: int): int =
+  if n == 0: 1
+  else:
+    let a = factorial0(n)
+    a * recursive2(n div 2) * recursive1(n div 2)
 \end{lstlisting}
 
 \begin{equation}
@@ -2786,17 +2681,16 @@ T(n) = 2 T(n/2) + P_1(n) \Rightarrow T(n)\in \Theta (n\log n)\Rightarrow \text{%
 One example of practical interest for us is the binary search below. It finds the location of the element in a sorted input array $A$:
 
 \begin{lstlisting}
-def binary_search(A, element):
-    a, b = 0, len(A)-1
-    while b>=a:
-        x = int((a+b)/2)
-        if A[x]<element:
-            a = x+1
-        elif A[x]>element:
-            b = x-1
-        else:
-            return x
-    return None
+proc binarySearch*[T](a: openArray[T], element: T): int =
+  ## Returns the index of `element` in sorted `a`, or -1 if not found.
+  var lo = 0
+  var hi = a.len - 1
+  while hi >= lo:
+    let x = (lo + hi) div 2
+    if a[x] < element: lo = x + 1
+    elif a[x] > element: hi = x - 1
+    else: return x
+  return -1
 \end{lstlisting}
 
 Notice that this algorithm does not appear to be recursive, but in practice, it is because of the apparently infinite while loop. The content of the while loop runs in constant time and then loops again on a problem of half of the original size:
@@ -2864,15 +2758,18 @@ say that the divide-and-conquer is a top-down technique.
 
 We can refactor the {\ft mergesort} algorithm to eliminate recursion in the algorithm implementation, while keeping the logic of the algorithm unchanged. Here is a possible implementation:
 \begin{lstlisting}
-def mergesort_nonrecursive(A):
-    blocksize, n = 1, len(A)
-    while blocksize<n:
-        for p in range(0, n, 2 * blocksize):
-            q = p+blocksize
-            r = min(q+blocksize, n)
-            if r>q:
-                Merge(A, p, q, r)
-        blocksize = 2 * blocksize
+proc mergesortNonrecursive*[T](a: var seq[T]) =
+  let n = a.len
+  var blocksize = 1
+  while blocksize < n:
+    var p = 0
+    while p < n:
+      let q = p + blocksize
+      let r = min(q + blocksize, n)
+      if r > q:
+        merge(a, p, q, r)
+      p += 2 * blocksize
+    blocksize *= 2
 \end{lstlisting}
 
 Notice that this has the same running time as the original {\ft mergesort} because, although it is not recursive, it performs the same operations:
@@ -2934,49 +2831,47 @@ Consider, for example, Fibonacci numbers:
 which we can implement using divide-and-conquer as follows:
 
 \begin{lstlisting}
-def fib(n):
-    return n if n<2 else fib(n-1)+fib(n-2)
+proc fib(n: int): int =
+  if n < 2: n else: fib(n-1) + fib(n-2)
 \end{lstlisting}
 
 The recurrence relation for this algorithm is $T(n)=T(n-1)+T(n-2)+1$, and its solution can be proven to be exponential. This is because this algorithm calls itself more than necessary with the same input values and keeps solving the same subproblem over and over.
 
 \index{class!Memoize}
 
-Python can implement memoization using the following decorator:
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-class memoize(object):
-    def __init__ (self, f):
-        self.f = f
-        self.storage = {}
-    def __call__ (self, * args, ** kwargs):
-        key = str((self.f.__name__, args, kwargs))
-        try:
-            value = self.storage[key]
-        except KeyError:
-            value = self.f( * args, ** kwargs)
-            self.storage[key] = value
-        return value
+Nim does not have decorators like Python, but we can write a generic {\ft memoize} higher-order procedure that takes a recursive function (which receives the memoized closure as its first argument so it can recurse) and returns a cached version:
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+import std/tables
+
+proc memoize*[K, V](f: proc(self: proc(x: K): V, x: K): V):
+                     proc(x: K): V =
+  var storage = initTable[K, V]()
+  proc memoized(x: K): V =
+    if x in storage: return storage[x]
+    result = f(memoized, x)
+    storage[x] = result
+  return memoized
 \end{lstlisting}
 
-and simply decorating the recursive function as follows:
+and applying it to the recursive function as follows:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-@memoize
-def fib(n):
-    return n if n<2 else fib(n-1)+fib(n-2)
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+let fib = memoize[int, int](
+  proc(self: proc(x: int): int, n: int): int =
+    if n < 2: n else: self(n-1) + self(n-2))
 \end{lstlisting}
 
 which we can call as
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> fib(11)
-89
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+echo fib(11)
+# 89
 \end{lstlisting}
 
-A decorator is a Python function that takes a function and returns a callable object (or a function) to replace the one passed as input. In the previous example, we are using the {\ft @memoize} decorator to replace the {\ft fib} function with the {\ft \_\_call\_\_} argument of the {\ft memoize} class.
+The recursive function takes the memoized closure as its first parameter, so when it calls itself it goes through the cache. This is the Nim equivalent of Python's {\ft @memoize} decorator pattern.
 
 This makes the algorithm run much faster. Its running time goes from exponential to linear. Notice that the preceding {\ft memoize} decorator is very general and can be used to decorate any other function.
 
@@ -2984,12 +2879,13 @@ One more direct
 dynamic programming approach consists in removing the recursion:
 
 \begin{lstlisting}
-def fib(n):
-    if n < 2: return n
-    a, b = 0, 1
-    for i in range(1, n):
-        a, b = b, a+b
-    return b
+proc fib(n: int): int =
+  if n < 2: return n
+  var a = 0
+  var b = 1
+  for i in 1 ..< n:
+    (a, b) = (b, a + b)
+  return b
 \end{lstlisting}
 
 This also makes the algorithm linear and $T(n) \in \Theta(n)$.
@@ -2998,21 +2894,19 @@ This also makes the algorithm linear and $T(n) \in \Theta(n)$.
 
 Notice that we easily modify the memoization algorithm to store the partial results in a shared space, for example, on disk using the {\ft PersistentDictionary}:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-class memoize_persistent(object):
-    STORAGE = "memoize.sqlite"
-    def __init__ (self, f):
-        self.f = f
-        self.storage = PersistentDictionary(memoize_persistent.STORAGE)
-    def __call__ (self, * args, ** kwargs):
-        key = str((self.f.__name__, args, kwargs))
-        if key in self.storage:
-            value = self.storage[key]
-        else:
-            value = self.f( * args, ** kwargs)
-            self.storage[key] = value
-        return value
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc memoizePersistent*[K, V](f: proc(self: proc(x: K): V, x: K): V,
+                              path = "memoize.sqlite"):
+                              proc(x: K): V =
+  let storage = newPersistentDictionary(path)
+  proc memoized(x: K): V =
+    let key = $x
+    if key in storage:
+      return storage[key]
+    result = f(memoized, x)
+    storage[key] = result
+  return memoized
 \end{lstlisting}
 
 We can use it as we did before, but we can now start and stop the program or run concurrent parallel programs, and as long as they have access to the ``memoize.sqlite'' file, they will share the cache.
@@ -3024,11 +2918,11 @@ The order of growth is a theoretical concept. In practice, we need to time algor
 
 For example, consider this:
 \begin{lstlisting}
-def f1(n):
-    return sum(g1(x) for x in range(n))
+proc f1(n: int): int =
+  for x in 0 ..< n: result += g1(x)
 
-def f2(n):
-    return sum(g2(x) for x in range(n ** 2))
+proc f2(n: int): int =
+  for x in 0 ..< n * n: result += g2(x)
 \end{lstlisting}
 
 
@@ -3036,45 +2930,48 @@ Since {\ft f1} is $\Theta(n)$ and {\ft f2} is $\Theta(n^2)$, we may be led to co
 
 To time functions in Python, we can use this simple algorithm:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}
-import time
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+import std/times
 
-def timef(f, ns=1000, dt = 60):
-    t = t0 = time.time()
-    for k in range(1, ns):
-        f()
-        t = time.time()
-        if t - t0 > dt: break
-    return (t - t0) / k
+proc timef*(f: proc(), ns = 1000, dt = 60.0): float =
+  let t0 = epochTime()
+  var t = t0
+  var k = 1
+  while k < ns:
+    f()
+    t = epochTime()
+    if t - t0 > dt: break
+    inc k
+  result = (t - t0) / float(k)
 \end{lstlisting}
 
 This function calls and averages the running time of {\ft f()} for the minimum between {\ft ns=1000} iterations and {\ft dt=60} seconds.
 
-It is now easy, for example, to time the fib function without memoize, 
+It is now easy, for example, to time the fib function without memoize,
 \begin{lstlisting}
->>> def fib(n):
-...     return n if n<2 else fib(n-1)+fib(n-2)
->>> for k in range(15, 20):
-...     print(k, timef(lambda:fib(k)))
-15 0.000315684575338
-16 0.000576375363706
-17 0.000936052104732
-18 0.00135168084153
-19 0.00217730337912
+proc fib(n: int): int =
+  if n < 2: n else: fib(n-1) + fib(n-2)
+for k in 15 .. 19:
+  echo k, " ", timef(proc() = discard fib(k))
+# 15 0.000315684575338
+# 16 0.000576375363706
+# 17 0.000936052104732
+# 18 0.00135168084153
+# 19 0.00217730337912
 \end{lstlisting}
-and with memoize, 
+and with memoize,
 \begin{lstlisting}
->>> @memoize
-... def fib(n):
-...     return n if n<2 else fib(n-1)+fib(n-2)
->>> for k in range(15, 20):
-...     print(k, timef(lambda:fib(k)))
-15 4.24022311802e-06
-16 4.02901146386e-06
-17 4.21922128122e-06
-18 4.02495429084e-06
-19 3.73784963552e-06
+let fib = memoize[int, int](
+  proc(self: proc(x: int): int, n: int): int =
+    if n < 2: n else: self(n-1) + self(n-2))
+for k in 15 .. 19:
+  echo k, " ", timef(proc() = discard fib(k))
+# 15 4.24022311802e-06
+# 16 4.02901146386e-06
+# 17 4.21922128122e-06
+# 18 4.02495429084e-06
+# 19 3.73784963552e-06
 \end{lstlisting}
 
 The former shows an exponential behavior; the latter does not.
@@ -3106,50 +3003,41 @@ In Python, we can implement push by appending an item at the end of a list (Pyth
 A simple stack example is as follows:
 
 \begin{lstlisting}
->>> stk = []
->>> stk.append("One")
->>> stk.append("Two")
->>> stk.pop()
-Two
->>> stk.append("Three")
->>> stk.pop()
-Three
->>> stk.pop()
-One
+var stk: seq[string] = @[]
+stk.add "One"
+stk.add "Two"
+echo stk.pop()    # "Two"
+stk.add "Three"
+echo stk.pop()    # "Three"
+echo stk.pop()    # "One"
 \end{lstlisting}
 
 
 \goodbreak\subsection{Queue}
 
-A queue data structure is similar to a stack but, whereas the stack returns the most recent item added, a queue returns the oldest item in the list.  This is commonly called first-in, first-out, or FIFO.  To use Python lists to implement a queue, insert the element to add in the first position of the list as follows:
+A queue data structure is similar to a stack but, whereas the stack returns the most recent item added, a queue returns the oldest item in the list.  This is commonly called first-in, first-out, or FIFO.  Using a {\ft seq} as a queue, we can insert each new element at the front:
 
 \begin{lstlisting}
->>> que = []
->>> que.insert(0, "One")
->>> que.insert(0, "Two")
->>> que.pop()
-One
->>> que.insert(0, "Three")
->>> que.pop()
-Two
->>> que.pop()
-Three
+var que: seq[string] = @[]
+que.insert("One", 0)
+que.insert("Two", 0)
+echo que.pop()    # "One"
+que.insert("Three", 0)
+echo que.pop()    # "Two"
+echo que.pop()    # "Three"
 \end{lstlisting}
 
-Lists in Python are not an efficient mechanism for implementing queues.  Each insertion or removal of an element at the front of a list requires all the elements in the list to be shifted by one. The Python package {\ft collections.deque} is designed to implement queues and stacks.  For a stack or queue, you use the same method {\ft .append} to add items.  For a stack, {\ft .pop} is used to return the most recent item added, while to build a queue, use {\ft .popleft} to remove the oldest item in the list:
+Inserting at the front of a {\ft seq} requires shifting all later elements, which is inefficient. Nim's {\ft std/deques} module provides a double-ended queue with O(1) push/pop on both ends. The same method {\ft addLast} appends; {\ft popLast} removes from the back (stack behavior), while {\ft popFirst} removes from the front (queue behavior):
 
 \begin{lstlisting}
->>> from collections import deque
->>> que = deque([])
->>> que.append("One")
->>> que.append("Two")
->>> que.popleft()
-One
->>> que.append("Three")
->>> que.popleft()
-Two
->>> que.popleft()
-Three
+import std/deques
+var que = initDeque[string]()
+que.addLast "One"
+que.addLast "Two"
+echo que.popFirst()    # "One"
+que.addLast "Three"
+echo que.popFirst()    # "Two"
+echo que.popFirst()    # "Three"
 \end{lstlisting}
 
 
@@ -3160,23 +3048,22 @@ Three
 In the previous sections, we have seen the {\it insertion sort} and the {\it merge sort}. Here we consider, as examples, other sorting algorithms: the {\it quicksort}~\cite{mergesort}, the {\it randomized quicksort}, and the {\it counting sort}:
 
 \begin{lstlisting}
-def quicksort(A, p=0, r=-1):
-    if r is -1:
-        r=len(A)
-    if p<r-1:
-        q=partition(A, p, r)
-        quicksort(A, p, q)
-        quicksort(A, q+1, r)
+proc partition[T](a: var seq[T], i, j: int): int =
+  let x = a[i]
+  var h = i
+  for k in i+1 ..< j:
+    if a[k] < x:
+      inc h
+      swap(a[h], a[k])
+  swap(a[h], a[i])
+  return h
 
-def partition(A, i, j):
-    x=A[i]
-    h=i
-    for k in range(i+1, j):
-        if A[k]<x:
-            h=h+1
-            A[h], A[k] = A[k], A[h]
-    A[h], A[i] = A[i], A[h]
-    return h
+proc quicksort*[T](a: var seq[T], p = 0, r = -1) =
+  let r = if r < 0: a.len else: r
+  if p < r - 1:
+    let q = partition(a, p, r)
+    quicksort(a, p, q)
+    quicksort(a, q + 1, r)
 \end{lstlisting}
 
 The running time of the quicksort is given by
@@ -3189,15 +3076,14 @@ T_{worst} &\in &\Theta (n^2) \\
 
 The quicksort can also be randomized by picking the pivot, {\ft A[r]}, at random:
 \begin{lstlisting}
-def quicksort(A, p=0, r=-1):
-    if r is -1:
-        r=len(A)
-    if p<r-1:
-        q = random.randint(p, r-1)
-        A[p], A[q] = A[q], A[p]
-        q=partition(A, p, r)
-        quicksort(A, p, q)
-        quicksort(A, q+1, r)
+proc quicksort*[T](a: var seq[T], p = 0, r = -1) =
+  let r = if r < 0: a.len else: r
+  if p < r - 1:
+    let q0 = rand(p .. r - 1)
+    swap(a[p], a[q0])
+    let q = partition(a, p, r)
+    quicksort(a, p, q)
+    quicksort(a, q + 1, r)
 \end{lstlisting}
 
 In this case, the best and the worst running times do not change, but the average improves when the input is already almost sorted.
@@ -3208,16 +3094,24 @@ The {\it counting sort} algorithm is special because it only works for arrays of
 
 Here is a possible implementation:
 \begin{lstlisting}
-def countingsort(A):
-    if min(A)<0:
-        raise "_counting_sort List Unbound"
-    i, n, k = 0, len(A), max(A)+1
-    C = [0] * k
-    for j in range(n):
-        C[A[j]] = C[A[j]]+1
-    for j in range(k):
-        while C[j]>0:
-           (A[i], C[j], i) = (j, C[j]-1, i+1)
+proc countingsort*(a: var seq[int]) =
+  if a.len == 0: return
+  var lo = a[0]
+  var hi = a[0]
+  for v in a:
+    if v < lo: lo = v
+    if v > hi: hi = v
+  if lo < 0:
+    raise newException(ValueError, "countingsort requires non-negative ints")
+  let k = hi + 1
+  var c = newSeq[int](k)
+  for v in a: inc c[v]
+  var i = 0
+  for j in 0 ..< k:
+    while c[j] > 0:
+      a[i] = j
+      dec c[j]
+      inc i
 \end{lstlisting}
 
 If we define $k=max(A)-min(A)+1$ and $n=len(A)$, we see
@@ -3248,14 +3142,9 @@ It starts from the top node, called the {\it root}. Each node has zero, one, or 
 
 We can implement a complete binary tree using a list, and the child--parent relations are given by the following formulas:
 \begin{lstlisting}
-def heap_parent(i):
-    return int((i-1)/2)
-
-def heap_left_child(i):
-    return 2 * i+1
-
-def heap_right_child(i):
-    return 2 * i+2
+proc heapParent(i: int): int = (i - 1) div 2
+proc heapLeftChild(i: int): int = 2 * i + 1
+proc heapRightChild(i: int): int = 2 * i + 2
 \end{lstlisting}
 
 We can store data (e.g., numbers) in the nodes (or in the corresponding array). If the data are
@@ -3264,24 +3153,22 @@ stored in such a way that the value at one node is always greater or equal than 
 First of all, we need an algorithm to convert a list into a heap:
 
 \begin{lstlisting}
-def heapify(A):
-    for i in range(int(len(A)/2)-1, -1, -1):
-        heapify_one(A, i)
+proc heapifyOne*[T](a: var seq[T], i: int, heapsize = -1) =
+  let heapsize = if heapsize < 0: a.len else: heapsize
+  let left = 2 * i + 1
+  let right = 2 * i + 2
+  var largest = i
+  if left < heapsize and a[left] > a[largest]:
+    largest = left
+  if right < heapsize and a[right] > a[largest]:
+    largest = right
+  if largest != i:
+    swap(a[i], a[largest])
+    heapifyOne(a, largest, heapsize)
 
-def heapify_one(A, i, heapsize=None):
-    if heapsize is None:
-        heapsize = len(A)
-    left = 2 * i+1
-    right = 2 * i+2
-    if left<heapsize and A[left]>A[i]:
-        largest = left
-    else:
-        largest = i
-    if right<heapsize and A[right]>A[largest]:
-        largest = right
-    if largest!=i:
-        (A[i], A[largest]) = (A[largest], A[i])
-        heapify_one(A, largest, heapsize)
+proc heapify*[T](a: var seq[T]) =
+  for i in countdown(a.len div 2 - 1, 0):
+    heapifyOne(a, i)
 \end{lstlisting}
 
 Now we can call {\ft build\_heap} on any array or list and turn it into a heap.
@@ -3296,12 +3183,11 @@ Instead of using the preceding divide-and-conquer approach, it is better to use 
 This is a possible implementation for the {\ft heapsort}~\cite{heapsort}:
 
 \begin{lstlisting}
-def heapsort(A):
-    heapify(A)
-    n = len(A)
-    for i in range(n-1, 0, -1):
-        (A[0], A[i]) = (A[i], A[0])
-        heapify_one(A, 0, i)
+proc heapsort*[T](a: var seq[T]) =
+  heapify(a)
+  for i in countdown(a.len - 1, 1):
+    swap(a[0], a[i])
+    heapifyOne(a, 0, i)
 \end{lstlisting}
 
 In the average and worst cases, it runs as fast as the quicksort, but in the best case, it is linear:
@@ -3320,24 +3206,25 @@ A heap can be used to implement a priority queue, for example, storage from whic
 All we need is a function that allows extracting the root element from a heap (as we did in the {\ft heapsort} and {\ft heapify} of the remaining data) and a function to push a new value into the heap:
 
 \begin{lstlisting}
-def heap_pop(A):
-    if len(A)<1:
-        raise RuntimeError("Heap Underflow")
-    largest = A[0]
-    A[0] = A[len(A)-1]
-    del A[len(A)-1]
-    heapify_one(A, 0)
-    return largest
+proc heapPop*[T](a: var seq[T]): T =
+  if a.len < 1:
+    raise newException(IndexDefect, "Heap Underflow")
+  result = a[0]
+  a[0] = a[^1]
+  a.setLen(a.len - 1)
+  if a.len > 0:
+    heapifyOne(a, 0)
 
-def heap_push(A, value):
-    A.append(value)
-    i = len(A)-1
-    while i>0:
-        j = heap_parent(i)
-        if A[j]<A[i]:
-            (A[i], A[j], i) = (A[j], A[i], j)
-        else:
-            break
+proc heapPush*[T](a: var seq[T], value: T) =
+  a.add value
+  var i = a.len - 1
+  while i > 0:
+    let j = heapParent(i)
+    if a[j] < a[i]:
+      swap(a[i], a[j])
+      i = j
+    else:
+      break
 \end{lstlisting}
 
 The running times for {\ft heap\_pop} and {\ft heap\_push} are the same:
@@ -3352,33 +3239,33 @@ T_{memory} &\in &\Theta (1)
 Here is an example:
 
 \begin{lstlisting}
->>> a = [6, 2, 7, 9, 3]
->>> heap = []
->>> for element in a: heap_push(heap, element)
->>> while heap: print(heap_pop(heap))
-9
-7
-6
-3
-2
+let a = @[6, 2, 7, 9, 3]
+var heap: seq[int] = @[]
+for element in a: heapPush(heap, element)
+while heap.len > 0: echo heapPop(heap)
+# 9
+# 7
+# 6
+# 3
+# 2
 \end{lstlisting}
 
-Heaps find application in many numerical algorithms. In fact, there is a built-in Python module for them called {\ft heapq}, which provides similar functionality to the functions defined here, except that we defined a max heap (pops the max element) while {\ft heapq} is a min heap (pops the minimum):
+Heaps find application in many numerical algorithms. Nim's standard library provides {\ft std/heapqueue}, which offers similar functionality, except that {\ft HeapQueue} is a min-heap (pops the smallest element) while we defined a max-heap above:
 
 \begin{lstlisting}
->>> from heapq import heappop, heappush
->>> a = [6, 2, 7, 9, 3]
->>> heap = []
->>> for element in a: heappush(heap, element)
->>> while heap: print(heappop(heap))
-9
-7
-6
-3
-2
+import std/heapqueue
+let a = @[6, 2, 7, 9, 3]
+var heap = initHeapQueue[int]()
+for element in a: heap.push(element)
+while heap.len > 0: echo heap.pop()
+# 2
+# 3
+# 6
+# 7
+# 9
 \end{lstlisting}
 
-Notice {\ft heappop} instead of {\ft heap\_pop} and {\ft heappush} instead of {\ft heap\_push}.
+Notice that the order of {\ft pop} results is reversed because {\ft HeapQueue} is a min-heap.
 
 \subsection{Binary search trees}
 
@@ -3393,63 +3280,59 @@ This means that we can search simply by traversing the tree from top to bottom a
 To implement it, we need to have a class to represent a binary tree:
 
 \begin{lstlisting}
-class BinarySearchTree(object):
-     def __init__(self):
-         self.left = self.right = None
-         self.key = self.value =  None
-     def __setitem__(self, key, value):
-         if self.key == None:
-             self.key, self.value = key, value
-         elif key == self.key:
-             self.value = value
-         elif key < self.key:
-             if self.left:
-                 self.left[key] = value
-             else:
-                 self.left = BinarySearchTree(key, value)
-         else:
-             if self.right:
-                 self.right[key] = value
-             else:
-                 self.right = BinarySearchTree(key, value)
-     def __getitem__(self, key):
-         if self.key == None:
-             retur None
-         elif key == self.key:
-             return self.value
-         elif key<self.key and self.left:
-             return self.left[key]
-         elif key>self.key and self.right:
-             return self.right[key]
-         else:
-             return None
-     def min(self):
-         node = self
-         while node.left:
-             node = self.left
-         return node.key, node.value
-     def max(self):
-         node = self
-         while node.right:
-             node = self.right
-         return node.key, node.value
+type
+  BinarySearchTree*[K, V] = ref object
+    key*: K
+    value*: V
+    hasKey*: bool
+    left*, right*: BinarySearchTree[K, V]
+
+proc newBinarySearchTree*[K, V](): BinarySearchTree[K, V] =
+  BinarySearchTree[K, V]()
+
+proc `[]=`*[K, V](t: BinarySearchTree[K, V], key: K, value: V) =
+  if not t.hasKey:
+    t.key = key; t.value = value; t.hasKey = true
+  elif key == t.key:
+    t.value = value
+  elif key < t.key:
+    if t.left.isNil: t.left = newBinarySearchTree[K, V]()
+    t.left[key] = value
+  else:
+    if t.right.isNil: t.right = newBinarySearchTree[K, V]()
+    t.right[key] = value
+
+proc `[]`*[K, V](t: BinarySearchTree[K, V], key: K): V =
+  if not t.hasKey: return default(V)
+  if key == t.key: return t.value
+  elif key < t.key and not t.left.isNil: return t.left[key]
+  elif key > t.key and not t.right.isNil: return t.right[key]
+  else: return default(V)
+
+proc min*[K, V](t: BinarySearchTree[K, V]): (K, V) =
+  var node = t
+  while not node.left.isNil:
+    node = node.left
+  (node.key, node.value)
+
+proc max*[K, V](t: BinarySearchTree[K, V]): (K, V) =
+  var node = t
+  while not node.right.isNil:
+    node = node.right
+  (node.key, node.value)
 \end{lstlisting}
 
 The binary tree can be used as follows:
 
 \begin{lstlisting}
->>> root = BinarySearchTree()
->>> root[5] = "aaa"
->>> root[3] = "bbb"
->>> root[8] = "ccc"
->>> root.left.key
-3
->>> root.left.value
-bbb
->>> root[3]
-bbb
->>> root.max()
-8 ccc
+let root = newBinarySearchTree[int, string]()
+root[5] = "aaa"
+root[3] = "bbb"
+root[8] = "ccc"
+echo root.left.key      # 3
+echo root.left.value    # "bbb"
+echo root[3]            # "bbb"
+echo root.max()         # (8, "ccc")
 \end{lstlisting}
 
 Notice that an empty tree is treated as an exception, where {\ft key = None}.
@@ -3555,9 +3438,9 @@ The graph is such a general data structure that it can be used to model the brai
 In what follows, we represent a graph in the following way, where links are edges:
 
 \begin{lstlisting}
->>> vertices = ["A", "B", "C", "D", "E"]
->>> links = [(0, 1), (1, 2), (1, 3), (2, 5), (3, 4), (3, 2)]
->>> graph = (vertices, links)
+let vertices = @["A", "B", "C", "D", "E"]
+let links = @[(0, 1), (1, 2), (1, 3), (2, 5), (3, 4), (3, 2)]
+let graph = (vertices, links)
 \end{lstlisting}
 
 Vertices are stored in a list or array and so are links. Each link is a tuple containing the ID of the source vertex, the ID of the target vertex, and perhaps optional parameters.  Optional parameters are discussed later, but for now, they may include link details such as length, speed, reliability, or billing rate.
@@ -3574,22 +3457,23 @@ The algorithm starts by building a table of neighbors so that for each vertex, i
 
 Here is the algorithm:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def breadth_first_search(graph, start):
-    vertices, links = graph
-    blacknodes = []
-    graynodes = [start]
-    neighbors = [[] for vertex in vertices]
-    for link in links:
-        neighbors[link[0]].append(link[1])
-    while graynodes:
-        current = graynodes.pop()
-        for neighbor in neighbors[current]:
-            if not neighbor in blacknodes+graynodes:
-                graynodes.insert(0, neighbor)
-        blacknodes.append(current)
-    return blacknodes
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc breadthFirstSearch*[V](
+    graph: tuple[vertices: seq[V], links: seq[(int, int)]],
+    start: int): seq[int] =
+  var blacknodes: seq[int] = @[]
+  var graynodes = @[start]
+  var neighbors = newSeq[seq[int]](graph.vertices.len)
+  for link in graph.links:
+    neighbors[link[0]].add link[1]
+  while graynodes.len > 0:
+    let current = graynodes.pop()
+    for neighbor in neighbors[current]:
+      if neighbor notin blacknodes and neighbor notin graynodes:
+        graynodes.insert(neighbor, 0)
+    blacknodes.add current
+  result = blacknodes
 \end{lstlisting}
 
 The BFS algorithm scales as follows:
@@ -3610,22 +3494,23 @@ In the cities analogy, if the BFS was exploring cities in the neighborhood befor
 
 Here is a possible implementation:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def depth_first_search(graph, start):
-    vertices, links = graph
-    blacknodes = []
-    graynodes = [start]
-    neighbors = [[] for vertex in vertices]
-    for link in links:
-        neighbors[link[0]].append(link[1])
-    while graynodes:
-        current = graynodes.pop()
-        for neighbor in neighbors[current]:
-            if not neighbor in blacknodes+graynodes:
-                graynodes.append(neighbor)
-        blacknodes.append(current)
-    return blacknodes
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc depthFirstSearch*[V](
+    graph: tuple[vertices: seq[V], links: seq[(int, int)]],
+    start: int): seq[int] =
+  var blacknodes: seq[int] = @[]
+  var graynodes = @[start]
+  var neighbors = newSeq[seq[int]](graph.vertices.len)
+  for link in graph.links:
+    neighbors[link[0]].add link[1]
+  while graynodes.len > 0:
+    let current = graynodes.pop()
+    for neighbor in neighbors[current]:
+      if neighbor notin blacknodes and neighbor notin graynodes:
+        graynodes.add neighbor
+    blacknodes.add current
+  result = blacknodes
 \end{lstlisting}
 
 Notice that the BFS and the DFS differ by a single line, which determines whether graynodes is a queue (BSF) or a stack (DFS). When graynodes is a queue, the first vertex discovered is the first visited. When it is a stack, the last vertex discovered is the first visited.
@@ -3649,30 +3534,38 @@ Here is the implementation:
 
 \index{class!DisjointSets}
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-class DisjointSets(object):
-    def __init__(self, n):
-        self.sets = [-1] * n
-        self.counter = n
-    def parent(self, i):
-        while True:
-            j = self.sets[i]
-            if j<0:
-                return i
-            i = j
-    def join(self, i, j):
-        i, j = self.parent(i), self.parent(j)
-        if i!=j:
-            self.sets[i] += self.sets[j]
-            self.sets[j] = i
-            self.counter-=1
-            return True  # they have been joined
-        return False     # they were already joined
-    def joined(self, i, j):
-       return self.parent(i) == self.parent(j)
-    def __len__(self):
-        return self.counter
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+type
+  DisjointSets* = ref object
+    sets*: seq[int]
+    counter*: int
+
+proc newDisjointSets*(n: int): DisjointSets =
+  result = DisjointSets(sets: newSeq[int](n), counter: n)
+  for i in 0 ..< n: result.sets[i] = -1
+
+proc parent*(d: DisjointSets, i: int): int =
+  var i = i
+  while true:
+    let j = d.sets[i]
+    if j < 0: return i
+    i = j
+
+proc join*(d: DisjointSets, i, j: int): bool =
+  let pi = d.parent(i)
+  let pj = d.parent(j)
+  if pi != pj:
+    d.sets[pi] += d.sets[pj]
+    d.sets[pj] = pi
+    dec d.counter
+    return true   # they have been joined
+  return false    # they were already joined
+
+proc joined*(d: DisjointSets, i, j: int): bool =
+  d.parent(i) == d.parent(j)
+
+proc len*(d: DisjointSets): int = d.counter
 \end{lstlisting}
 
 Notice that we added a member variable counter that is initialized to the number of disjoint sets and is decreased by one every time two sets are merged. This allows us to keep track of how many disjoint sets exist at each time. We also override the {\ft \_\_len\_\_} operator so that we can check the value of the counter using the {\ft len} function on a {\ft DisjointSet}.
@@ -3681,27 +3574,34 @@ As an example of application, here is a code that builds a $n^d$ maze. It may be
 It puts all the cells into a {\ft DisjointSets} data structure and then keeps tearing down walls at random. Two cells on the maze belong to the same set if they are connected, for example, if there is a path that connects them. At the beginning, each cell is its own set because it is isolated by walls.
 Walls are torn down by being removed from the list {\ft wall} if the wall was separating two disjoint sets of cells. Walls are torn down until all cells belong to the same set, for example, there is a path connecting any cell to any cell:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}
-def make_maze(n, d):
-    walls = [(i, i+n ** j) for i in range(n ** 2) for j in range(d) if (i/n ** j)%n+1<n]
-    torn_down_walls = []
-    ds = DisjointSets(n ** d)
-    random.shuffle(walls)
-    for i, wall in enumerate(walls):
-        if ds.join(wall[0], wall[1]):
-            torn_down_walls.append(wall)
-        if len(ds) == 1:
-            break
-    walls = [wall for wall in walls if not wall in torn_down_walls]
-    return walls, torn_down_walls
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc makeMaze*(n, d: int): tuple[walls, tornDownWalls: seq[(int, int)]] =
+  var walls: seq[(int, int)] = @[]
+  let total = n ^ d
+  for i in 0 ..< n * n:
+    for j in 0 ..< d:
+      if (i div (n ^ j)) mod n + 1 < n:
+        walls.add (i, i + n ^ j)
+  var tornDownWalls: seq[(int, int)] = @[]
+  let ds = newDisjointSets(total)
+  shuffle(walls)
+  for wall in walls:
+    if ds.join(wall[0], wall[1]):
+      tornDownWalls.add wall
+    if ds.len == 1:
+      break
+  var remaining: seq[(int, int)] = @[]
+  for wall in walls:
+    if wall notin tornDownWalls:
+      remaining.add wall
+  (remaining, tornDownWalls)
 \end{lstlisting}
 
 Here is an example of how to use it. This example also draws the walls and the border of the maze:
 
-%%% META:FILE:nlib.py
 \begin{lstlisting}
->>> walls, torn_down_walls = make_maze(n=20, d=2)
+let (walls, tornDownWalls) = makeMaze(n = 20, d = 2)
 \end{lstlisting}
 
 The following figure shows a representation of a generated maze:
@@ -3724,17 +3624,21 @@ Given a connected graph with weighted links (links with a weight or length), a {
 
 One algorithm to build the minimal spanning tree of a graph is the Kruskal~\cite{kruskal} algorithm. It works by placing all vertices in a {\ft DisjointSets} structure and looping over links in order of their weight. If the link connects two vertices belonging to different sets, the link is selected to be part of the minimum spanning tree, and the two sets are joined, else the link is ignored. The Kruskal algorithm assumes an undirected graph, for example, all links are bidirectional, and the weight of a link is the same in both directions:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def Kruskal(graph):
-    vertices, links = graph
-    A = []
-    S = DisjointSets(len(vertices))
-    links.sort(cmp=lambda a, b: cmp(a[2], b[2]))
-    for source, dest, length in links:
-        if S.join(source, dest):
-            A.append((source, dest, length))
-    return A
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+import std/algorithm
+
+proc kruskal*[V](
+    graph: tuple[vertices: seq[V],
+                 links: seq[(int, int, float)]]
+    ): seq[(int, int, float)] =
+  var links = graph.links
+  links.sort(proc(a, b: (int, int, float)): int = cmp(a[2], b[2]))
+  let s = newDisjointSets(graph.vertices.len)
+  for link in links:
+    let (source, dest, length) = link
+    if s.join(source, dest):
+      result.add (source, dest, length)
 \end{lstlisting}
 
 The Kruskal algorithm goes as follows:
@@ -3751,51 +3655,67 @@ The Prim~\cite{prim} algorithm solves the same problem as the Kruskal algorithm,
 
 The Prim algorithm also differs from the Kruskal algorithm because the former needs a starting vertex, whereas the latter does not. The result when interpreted as a subgraph does not depend on the starting vertex:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-from heapq import heappush, heappop, heapify
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+const PRIM_INFINITY* = 1e100
 
-class PrimVertex(object):
-    INFINITY = 1e100
-    def __init__(self, id, links):
-        self.id = id
-        self.closest = None
-        self.closest_dist = PrimVertex.INFINITY
-        self.neighbors = [link[1:] for link in links if link[0] == id]
-    def __lt__(self, other):
-        return self.closest_dist < other.closest_dist
+type
+  PrimVertex* = ref object
+    id*: int
+    closest*: PrimVertex
+    closestDist*: float
+    neighbors*: seq[(int, float)]
 
-def Prim(graph, start):
-    vertices, links = graph
-    P = [PrimVertex(i, links) for i in vertices]
-    Q = [P[i] for i in vertices if not i == start]
-    vertex = P[start]
-    while Q:
-        for neighbor_id, length in vertex.neighbors:
-            neighbor = P[neighbor_id]
-            if neighbor in Q and length<neighbor.closest_dist:
-                 neighbor.closest = vertex
-                 neighbor.closest_dist = length
-        heapify(Q)
-        vertex = heappop(Q)
-    return [(v.id, v.closest.id, v.closest_dist) for v in P if not v.id == start]
+proc newPrimVertex*(id: int, links: seq[(int, int, float)]): PrimVertex =
+  result = PrimVertex(id: id, closest: nil, closestDist: PRIM_INFINITY)
+  for link in links:
+    if link[0] == id:
+      result.neighbors.add (link[1], link[2])
+
+proc `<`*(a, b: PrimVertex): bool = a.closestDist < b.closestDist
+
+proc prim*[V](
+    graph: tuple[vertices: seq[V], links: seq[(int, int, float)]],
+    start: int): seq[(int, int, float)] =
+  var p: seq[PrimVertex] = @[]
+  for i in 0 ..< graph.vertices.len:
+    p.add newPrimVertex(i, graph.links)
+  var q: seq[PrimVertex] = @[]
+  for i in 0 ..< graph.vertices.len:
+    if i != start: q.add p[i]
+  var vertex = p[start]
+  while q.len > 0:
+    for (neighborId, length) in vertex.neighbors:
+      let neighbor = p[neighborId]
+      if neighbor in q and length < neighbor.closestDist:
+        neighbor.closest = vertex
+        neighbor.closestDist = length
+    q.sort(proc(a, b: PrimVertex): int = cmp(a.closestDist, b.closestDist))
+    vertex = q[0]
+    q.delete(0)
+  for v in p:
+    if v.id != start:
+      result.add (v.id, v.closest.id, v.closestDist)
 \end{lstlisting}
 
 \begin{lstlisting}
->>> vertices = range(10)
->>> links = [(i, j, abs(math.sin(i+j+1))) for i in vertices for j in vertices]
->>> graph = [vertices, links]
->>> link = Prim(graph, 0)
->>> for link in links: print(link)
-(1, 4, 0.279...)
-(2, 0, 0.141...)
-(3, 2, 0.279...)
-(4, 1, 0.279...)
-(5, 0, 0.279...)
-(6, 2, 0.412...)
-(7, 8, 0.287...)
-(8, 7, 0.287...)
-(9, 6, 0.287...)
+let vertices = toSeq(0 ..< 10)
+var links: seq[(int, int, float)] = @[]
+for i in vertices:
+  for j in vertices:
+    links.add (i, j, abs(sin(float(i + j + 1))))
+let graph = (vertices, links)
+let mst = prim(graph, 0)
+for link in mst: echo link
+# (1, 4, 0.279...)
+# (2, 0, 0.141...)
+# (3, 2, 0.279...)
+# (4, 1, 0.279...)
+# (5, 0, 0.279...)
+# (6, 2, 0.412...)
+# (7, 8, 0.287...)
+# (8, 7, 0.287...)
+# (9, 6, 0.287...)
 \end{lstlisting}
 
 The Prim algorithm, when using a priority queue for $Q$, goes as follows:
@@ -3818,44 +3738,52 @@ It works, like Prim, by placing all vertices in a min priority queue where the q
 
 The implementation of this algorithm is almost identical to the Prim algorithm, except for two lines:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-from heapq import heappush, heappop, heapify
-
-def Dijkstra(graph, start):
-    vertices, links = graph
-    P = [PrimVertex(i, links) for i in vertices]
-    Q = [P[i] for i in vertices if not i == start]
-    vertex = P[start]
-    vertex.closest_dist = 0
-    while Q:
-        for neighbor_id, length in vertex.neighbors:
-            neighbor = P[neighbor_id]
-            dist = length+vertex.closest_dist
-            if neighbor in Q and dist<neighbor.closest_dist:
-                 neighbor.closest = vertex
-                 neighbor.closest_dist = dist
-        heapify(Q)
-        vertex = heappop(Q)
-    return [(v.id, v.closest.id, v.closest_dist) for v in P if not v.id == start]
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc dijkstra*[V](
+    graph: tuple[vertices: seq[V], links: seq[(int, int, float)]],
+    start: int): seq[(int, int, float)] =
+  var p: seq[PrimVertex] = @[]
+  for i in 0 ..< graph.vertices.len:
+    p.add newPrimVertex(i, graph.links)
+  var q: seq[PrimVertex] = @[]
+  for i in 0 ..< graph.vertices.len:
+    if i != start: q.add p[i]
+  var vertex = p[start]
+  vertex.closestDist = 0
+  while q.len > 0:
+    for (neighborId, length) in vertex.neighbors:
+      let neighbor = p[neighborId]
+      let dist = length + vertex.closestDist
+      if neighbor in q and dist < neighbor.closestDist:
+        neighbor.closest = vertex
+        neighbor.closestDist = dist
+    q.sort(proc(a, b: PrimVertex): int = cmp(a.closestDist, b.closestDist))
+    vertex = q[0]
+    q.delete(0)
+  for v in p:
+    if v.id != start:
+      result.add (v.id, v.closest.id, v.closestDist)
 \end{lstlisting}
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> vertices = range(10)
->>> links = [(i, j, abs(math.sin(i+j+1))) for i in vertices for j in vertices]
->>> graph = [vertices, links]
->>> links = Dijkstra(graph, 0)
->>> for link in links: print(link)
-(1, 2, 0.897...)
-(2, 0, 0.141...)
-(3, 2, 0.420...)
-(4, 2, 0.798...)
-(5, 0, 0.279...)
-(6, 2, 0.553...)
-(7, 2, 0.685...)
-(8, 0, 0.412...)
-(9, 0, 0.544...)
+\begin{lstlisting}
+let vertices = toSeq(0 ..< 10)
+var links: seq[(int, int, float)] = @[]
+for i in vertices:
+  for j in vertices:
+    links.add (i, j, abs(sin(float(i + j + 1))))
+let graph = (vertices, links)
+let paths = dijkstra(graph, 0)
+for link in paths: echo link
+# (1, 2, 0.897...)
+# (2, 0, 0.141...)
+# (3, 2, 0.420...)
+# (4, 2, 0.798...)
+# (5, 0, 0.279...)
+# (6, 2, 0.553...)
+# (7, 2, 0.685...)
+# (8, 0, 0.412...)
+# (9, 0, 0.544...)
 \end{lstlisting}
 
 The Dijkstra algorithm goes as follows:
@@ -3867,14 +3795,16 @@ T_{memory} &\in &\Theta (n_E)
 An application of the Dijkstra is in solving a maze such as the one built when discussing disjoint sets. To use the Dijkstra algorithm, we need to generate a maze, take the links representing torn-down walls, and use them to build an undirected graph. This is done by symmetrizing the links (if $i$ and $j$ are connected, $j$ and $i$ are also connected) and adding to each link a length (1, because all links connect next-neighbor cells):
 
 
-%%% META:FILE:nlib.py
 \begin{lstlisting}
->>> n, d = 4, 2
->>> walls, links = make_maze(n, d)
->>> symmetrized_links = [(i, j, 1) for (i, j) in links]+[(j, i, 1) for (i, j) in links]
->>> graph = [range(n * n), symmetrized_links]
->>> links = Dijkstra(graph, 0)
->>> paths = dict((i, (j, d)) for (i, j, d) in links)
+let (n, d) = (4, 2)
+let (mazeWalls, tornDown) = makeMaze(n, d)
+var symmetrizedLinks: seq[(int, int, float)] = @[]
+for (i, j) in tornDown: symmetrizedLinks.add (i, j, 1.0)
+for (i, j) in tornDown: symmetrizedLinks.add (j, i, 1.0)
+let graph = (toSeq(0 ..< n * n), symmetrizedLinks)
+let mst = dijkstra(graph, 0)
+var paths = initTable[int, (int, float)]()
+for (i, j, dd) in mst: paths[i] = (j, dd)
 \end{lstlisting}
 
 Given a maze cell {\ft i}, {\ft path[i]} gives us a tuple $(j, d)$ where $d$ is the number of steps for the shortest path to reach the origin (0) and $j$ is the ID of the next cell along this path.
@@ -3924,68 +3854,75 @@ formats are referred to as compression with information loss.
 
 Here is a possible implementation of Huffman encoding using the Python {\ft heapq} library. Notice that in order for it to work properly, we need to wrap the set of symbols they represent, and their relative frequency, into a class {\ft HuffmanNode} that implements the $<$ ({\ft \_\_lt\_\_}) operator.
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-from heapq import heappush, heappop
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+import std/heapqueue
 
-class HuffmanNode:
-    def __init__(self, frequency, content):
-        self.frequency = frequency
-        self.content = content
-    def __lt__(self, other):
-        return self.frequency < other.frequency
-    def unpack(self):
-        return self.frequency, self.content
-  
-def encode_huffman(input):
+type
+  HuffmanTreeKind* = enum hkLeaf, hkNode
+  HuffmanTree* = ref object
+    frequency*: int
+    case kind*: HuffmanTreeKind
+    of hkLeaf: symbol*: char
+    of hkNode: left*, right*: HuffmanTree
 
-    def inorder_tree_walk(t, key, keys):
-        (f, ab) = t
-        if isinstance(ab, tuple):
-            inorder_tree_walk(ab[0], key+"0", keys)
-            inorder_tree_walk(ab[1], key+"1", keys)
-        else:
-            keys[ab] = key
+  HuffmanNode* = object
+    frequency*: int
+    tree*: HuffmanTree
 
-    symbols = {}
-    for symbol in input:
-        symbols[symbol] = symbols.get(symbol, 0)+1
-    heap = []
-    for (k, f) in symbols.items():
-        heappush(heap, HuffmanNode(f, k))
-    while len(heap)>1:
-        (f1, k1) = heappop(heap).unpack()
-        (f2, k2) = heappop(heap).unpack()
-        heappush(heap, HuffmanNode(f1 + f2, ((f1, k1), (f2, k2))))
-    symbol_map = {}
-    root = heap[0].unpack()    
-    inorder_tree_walk(root, '', symbol_map)
-    encoded = ''.join(symbol_map[symbol] for symbol in input)
-    return symbol_map, encoded
+proc `<`*(a, b: HuffmanNode): bool = a.frequency < b.frequency
 
-def decode_huffman(keys, encoded):
-    reversed_map = dict((v, k) for (k, v) in keys.items())
-    i, output = 0, []
-    for j in range(1, len(encoded)+1):
-        if encoded[i:j] in reversed_map:
-           output.append(reversed_map[encoded[i:j]])
-           i=j
-    return ''.join(output)
+proc inorderTreeWalk(t: HuffmanTree, key: string,
+                     keys: var Table[char, string]) =
+  case t.kind
+  of hkLeaf: keys[t.symbol] = key
+  of hkNode:
+    inorderTreeWalk(t.left, key & "0", keys)
+    inorderTreeWalk(t.right, key & "1", keys)
+
+proc encodeHuffman*(input: string): (Table[char, string], string) =
+  var symbols = initTable[char, int]()
+  for s in input:
+    symbols[s] = symbols.getOrDefault(s, 0) + 1
+  var heap = initHeapQueue[HuffmanNode]()
+  for k, f in symbols:
+    heap.push(HuffmanNode(frequency: f,
+              tree: HuffmanTree(kind: hkLeaf, frequency: f, symbol: k)))
+  while heap.len > 1:
+    let n1 = heap.pop()
+    let n2 = heap.pop()
+    let merged = HuffmanTree(kind: hkNode,
+                             frequency: n1.frequency + n2.frequency,
+                             left: n1.tree, right: n2.tree)
+    heap.push(HuffmanNode(frequency: merged.frequency, tree: merged))
+  var symbolMap = initTable[char, string]()
+  inorderTreeWalk(heap[0].tree, "", symbolMap)
+  var encoded = ""
+  for s in input: encoded.add symbolMap[s]
+  (symbolMap, encoded)
+
+proc decodeHuffman*(keys: Table[char, string], encoded: string): string =
+  var reversed = initTable[string, char]()
+  for k, v in keys: reversed[v] = k
+  var i = 0
+  for j in 1 .. encoded.len:
+    let chunk = encoded[i ..< j]
+    if chunk in reversed:
+      result.add reversed[chunk]
+      i = j
 \end{lstlisting}
 
 We can use it as follows:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> input = "this is a nice day"
->>> keys, encoded = encode_huffman(input)
->>> print(encoded)
-00100101110011101100111011111000111100001111010000011110100
->>> decoded = decode_huffman(keys, encoded)
->>> decoded == input
-True
->>> print(1.0 * len(input)/(len(encoded)/8))
-2.44...
+\begin{lstlisting}
+let input = "this is a nice day"
+let (keys, encoded) = encodeHuffman(input)
+echo encoded
+# 00100101110011101100111011111000111100001111010000011110100
+let decoded = decodeHuffman(keys, encoded)
+echo decoded == input            # true
+echo 1.0 * float(input.len) / (float(encoded.len) / 8.0)
+# 2.44...
 \end{lstlisting}
 
 We managed to compress the original data by a factor 2.57.
@@ -4001,14 +3938,17 @@ E = -\sum_u w_i \log_2 w_i
 where $w_i$ is the relative frequency of each symbol.
 In our case, this is easy to compute as
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> from math import log
->>> input = "this is a nice day"
->>> w = [1.0 * input.count(c)/len(input) for c in set(input)]
->>> E = -sum(wi * log(wi, 2) for wi in w)
->>> print(E)
-3.23...
+\begin{lstlisting}
+import std/[math, sets]
+let input = "this is a nice day"
+var alphabet: HashSet[char]
+for c in input: alphabet.incl c
+var w: seq[float] = @[]
+for c in alphabet:
+  w.add float(input.count(c)) / float(input.len)
+var entropy = 0.0
+for wi in w: entropy -= wi * log2(wi)
+echo entropy   # 3.23...
 \end{lstlisting}
 
 How could we have done better? Notice for example that the Huffman encoding does not take into account the order in which symbols appear. The original string contains the triple ``is'' twice, and we could have taken advantage of that pattern, but we did not.
@@ -4079,31 +4019,31 @@ subproblem gives the correct solution by solving both and taking the max of
 the resulting subsequence lengths. Once we turn this into a dynamic
 programming algorithm, we get the following:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def lcs(a, b):
-    previous = [0] * len(a)
-    for i, r in enumerate(a):
-        current = []
-        for j, c in enumerate(b):
-            if r == c:
-                e = previous[j-1]+1 if i * j>0 else 1
-            else:
-                e = max(previous[j] if i>0 else 0, 
-                        current[-1] if j>0 else 0)
-            current.append(e)
-        previous=current
-    return current[-1]
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc lcs*(a, b: string): int =
+  var previous = newSeq[int](b.len)
+  var current = newSeq[int](b.len)
+  for i, r in a:
+    for j, c in b:
+      var e: int
+      if r == c:
+        e = (if i * j > 0: previous[j-1] + 1 else: 1)
+      else:
+        let up = if i > 0: previous[j] else: 0
+        let lf = if j > 0: current[j-1] else: 0
+        e = max(up, lf)
+      current[j] = e
+    previous = current
+  result = current[^1]
 \end{lstlisting}
 
 Here is an example:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> dna1 = "ATGCTTTAGAGGATGCGTAGATAGCTAAATAGCTCGCTAGA"
->>> dna2 = "GATAGGTACCACAATAATAAGGATAGCTCGCAAATCCTCGA"
->>> lcs(dna1, dna2)
-26
+\begin{lstlisting}
+let dna1 = "ATGCTTTAGAGGATGCGTAGATAGCTAAATAGCTCGCTAGA"
+let dna2 = "GATAGGTACCACAATAATAAGGATAGCTCGCAAATCCTCGA"
+echo lcs(dna1, dna2)   # 26
 \end{lstlisting}
 
 The algorithms can be shown to be $O(nm)$ (where $m=$ len(a) and $n=$ len(b)).
@@ -4111,9 +4051,9 @@ The algorithms can be shown to be $O(nm)$ (where $m=$ len(a) and $n=$ len(b)).
 Another application of this algorithm is in the Unix {\ft diff} utility. Here is a simple example to find the number of common lines between two files:
 
 \begin{lstlisting}
->>> a = open("file1.txt").readlines()
->>> b = open("file2.txt").readlines()
->>> lcs(a, b)
+let a = readFile("file1.txt")
+let b = readFile("file2.txt")
+echo lcs(a, b)
 \end{lstlisting}
 
 \subsection{Needleman--Wunsch}
@@ -4123,33 +4063,44 @@ Another application of this algorithm is in the Unix {\ft diff} utility. Here is
 With some minor changes to the LCS algorithm, we obtain the Needleman--Wunsch algorithm~\cite{needleman}, which solves the problem of {\it global sequence alignment}. The changes are that, instead of using only two alternating rows ({\ft c} and {\ft d} for storing the temporary results, we store all temporary results in an array {\ft z}; when two matching symbols are found and they are not consecutive, we apply a penalty equal to $p^m$, where $m$ is the distance between the two matches and is also the size of the gap in the matching subsequence:
 
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def needleman_wunsch(a, b, p=0.97):
-    z=[]
-    for i, r in enumerate(a):
-        z.append([])
-        for j, c in enumerate(b):
-            if r == c:
-                e = z[i-1][j-1]+1 if i * j>0 else 1
-            else:
-                e = p * max(z[i-1][j] if i>0 else 0, 
-                          z[i][j-1] if j>0 else 0)
-            z[-1].append(e)
-    return z
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc needlemanWunsch*(a, b: string, p = 0.97): seq[seq[float]] =
+  var z: seq[seq[float]] = @[]
+  for i, r in a:
+    var row: seq[float] = @[]
+    for j, c in b:
+      var e: float
+      if r == c:
+        e = if i * j > 0: z[i-1][j-1] + 1.0 else: 1.0
+      else:
+        let up = if i > 0: z[i-1][j] else: 0.0
+        let lf = if j > 0: row[j-1] else: 0.0
+        e = p * max(up, lf)
+      row.add e
+    z.add row
+  result = z
 \end{lstlisting}
 
 This algorithm can be used to identify common subsequences of DNA between chromosomes (or in general common similar subsequences between any two strings of binary data). Here is an example in which we look for common genes in two randomly generated chromosomes:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> bases = "ATGC"
->>> from random import choice
->>> genes = [''.join(choice(bases) for k in range(10)) for i in range(20)]
->>> chromosome1 = ''.join(choice(genes) for i in range(10))
->>> chromosome2 = ''.join(choice(genes) for i in range(10))
->>> z = needleman_wunsch(chromosome1, chromosome2)
->>> Canvas(title="Needleman-Wunsch").imshow(z).save("images/needleman.png")
+\begin{lstlisting}
+let bases = "ATGC"
+randomize()
+proc randString(n: int): string =
+  for _ in 0 ..< n: result.add bases[rand(bases.len - 1)]
+var genes: seq[string] = @[]
+for _ in 0 ..< 20: genes.add randString(10)
+var chromosome1, chromosome2 = ""
+for _ in 0 ..< 10:
+  chromosome1.add genes[rand(genes.len - 1)]
+  chromosome2.add genes[rand(genes.len - 1)]
+let z = needlemanWunsch(chromosome1, chromosome2)
+# Visualize z (e.g., with nimpy + matplotlib's imshow):
+# import nimpy
+# let plt = pyImport("matplotlib.pyplot")
+# discard plt.imshow(z); discard plt.title("Needleman-Wunsch")
+# discard plt.savefig("images/needleman.png")
 \end{lstlisting}
 
 The output of the algorithm is the following image:
@@ -4164,25 +4115,10 @@ The arrow-like patterns in the figure correspond to locations where {\ft chromos
 Both LCS and Needleman--Wunsch are available as optimized implementations in Biopython:
 
 \begin{lstlisting}
->>> from Bio import pairwise2
->>> alignments = pairwise2.align.globalxx(chromosome1, chromosome2)
->>> print(alignments[0].score)
-\end{lstlisting}
-
-Alternatively, using NumPy to vectorize the Needleman--Wunsch DP table:
-
-\begin{lstlisting}
->>> import numpy as np
->>> def needleman_wunsch_np(a, b, p=0.97):
-...     z = np.zeros((len(a), len(b)))
-...     for i, r in enumerate(a):
-...         for j, c in enumerate(b):
-...             if r == c:
-...                 z[i, j] = z[i-1, j-1] + 1 if i*j > 0 else 1
-...             else:
-...                 z[i, j] = p * max(z[i-1, j] if i > 0 else 0,
-...                                   z[i, j-1] if j > 0 else 0)
-...     return z
+import nimpy
+let pairwise2 = pyImport("Bio.pairwise2")
+let alignments = pairwise2.align.globalxx(chromosome1, chromosome2)
+echo alignments[0].score
 \end{lstlisting}
 
 \subsection{Continuous Knapsack}
@@ -4218,19 +4154,22 @@ Using financial terms, we can say that
 
 Here is the solving algorithm:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def continuum_knapsack(a, b, c):
-    table = [(a[i]/b[i], i) for i in range(len(a))]
-    table.sort()
-    table.reverse()
-    f=0.0
-    for (y, i) in table:
-        quantity = min(c/b[i], 1)
-        x.append((i, quantity))
-        c = c-b[i] * quantity
-        f = f+a[i] * quantity
-    return (f, x)
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc continuumKnapsack*(a, b: seq[float], c: float):
+                       (float, seq[(int, float)]) =
+  var table: seq[(float, int)] = @[]
+  for i in 0 ..< a.len: table.add (a[i] / b[i], i)
+  table.sort(SortOrder.Descending)
+  var f = 0.0
+  var x: seq[(int, float)] = @[]
+  var c = c
+  for (y, i) in table:
+    let quantity = min(c / b[i], 1.0)
+    x.add (i, quantity)
+    c -= b[i] * quantity
+    f += a[i] * quantity
+  (f, x)
 \end{lstlisting}
 
 This algorithm is dominated by the sort; therefore
@@ -4440,93 +4379,107 @@ At each point in time, each cluster is represented by one element, which can be 
 
 \index{class!Cluster}
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-class Cluster(object):
-    def __init__(self, points, metric, weights=None):
-        self.points, self.metric = points, metric
-        self.k = len(points)
-        self.w = weights or [1.0] * self.k
-        self.q = dict((i, [i]) for i, e in enumerate(points))
-        self.d = []
-        for i in range(self.k):
-            for j in range(i+1, self.k):
-                m = metric(points[i], points[j])
-                if not m is None:
-                    self.d.append((m, i, j))
-        self.d.sort()
-        self.dd = []
-    def parent(self, i):
-        while isinstance(i, int): (parent, i) = (i, self.q[i])
-        return parent, i
-    def step(self):
-        if self.k>1:
-             # find new clusters to join
-            (self.r, i, j), self.d = self.d[0], self.d[1:]
-             # join them
-            i, x = self.parent(i)  # find members of cluster i
-            j, y = self.parent(j)  # find members if cluster j
-            x += y                # join members
-            self.q[j] = i         # make j cluster point to i
-            self.k -= 1           # decrease cluster count
-             # update all distances to new joined cluster
-            new_d = []  # links not related to joined clusters
-            old_d = {}  # old links related to joined clusters
-            for (r, h, k) in self.d:
-                if h in (i, j):
-                    a, b = old_d.get(k, (0.0, 0.0))
-                    old_d[k] = a+self.w[k] * r, b+self.w[k]
-                elif k in (i, j):
-                    a, b = old_d.get(h, (0.0, 0.0))
-                    old_d[h] = a+self.w[h] * r, b+self.w[h]
-                else:
-                    new_d.append((r, h, k))
-            new_d += [(a/b, i, k) for k, (a, b) in old_d.items()]
-            new_d.sort()
-            self.d = new_d
-             # update weight of new cluster
-            self.w[i] = self.w[i]+self.w[j]
-             # get new list of cluster members
-            self.v = [s for s in self.q.values() if isinstance(s, list)]
-            self.dd.append((self.r, len(self.v)))
-        return self.r, self.v
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+type
+  ClusterEntry = object
+    case isList: bool
+    of true: members: seq[int]
+    of false: parentId: int
 
-    def find(self, k):
-         # if necessary start again
-        if self.k<k: self.__init__(self.points, self.metric)
-         # step until we get k clusters
-        while self.k>k: self.step()
-         # return list of cluster members
-        return self.r, self.v
+  Cluster*[T] = ref object
+    points*: seq[T]
+    metric*: proc(a, b: T): float
+    k*: int
+    w*: seq[float]
+    q*: Table[int, ClusterEntry]
+    d*: seq[(float, int, int)]
+    dd*: seq[(float, int)]
+    r*: float
+    v*: seq[seq[int]]
+
+proc newCluster*[T](points: seq[T],
+                    metric: proc(a, b: T): float,
+                    weights: seq[float] = @[]): Cluster[T] =
+  result = Cluster[T](points: points, metric: metric, k: points.len)
+  result.w = if weights.len > 0: weights
+             else: newSeqWith(points.len, 1.0)
+  for i in 0 ..< points.len:
+    result.q[i] = ClusterEntry(isList: true, members: @[i])
+  for i in 0 ..< points.len:
+    for j in i + 1 ..< points.len:
+      let m = metric(points[i], points[j])
+      if not m.isNaN:
+        result.d.add (m, i, j)
+  result.d.sort()
+
+proc parent*[T](c: Cluster[T], i: int): (int, seq[int]) =
+  var i = i
+  while c.q[i].isList == false:
+    i = c.q[i].parentId
+  (i, c.q[i].members)
+
+proc step*[T](c: Cluster[T]): (float, seq[seq[int]]) =
+  if c.k > 1:
+    let head = c.d[0]
+    c.r = head[0]
+    var i = head[1]
+    var j = head[2]
+    c.d.delete(0)
+    let (pi, x) = c.parent(i)
+    let (pj, y) = c.parent(j)
+    var merged = x & y
+    c.q[pi] = ClusterEntry(isList: true, members: merged)
+    c.q[pj] = ClusterEntry(isList: false, parentId: pi)
+    dec c.k
+    var newD: seq[(float, int, int)] = @[]
+    var oldD = initTable[int, (float, float)]()
+    for (r, h, k) in c.d:
+      if h in [pi, pj]:
+        let (a, b) = oldD.getOrDefault(k, (0.0, 0.0))
+        oldD[k] = (a + c.w[k] * r, b + c.w[k])
+      elif k in [pi, pj]:
+        let (a, b) = oldD.getOrDefault(h, (0.0, 0.0))
+        oldD[h] = (a + c.w[h] * r, b + c.w[h])
+      else:
+        newD.add (r, h, k)
+    for k, ab in oldD:
+      newD.add (ab[0] / ab[1], pi, k)
+    newD.sort()
+    c.d = newD
+    c.w[pi] = c.w[pi] + c.w[pj]
+    var v: seq[seq[int]] = @[]
+    for _, e in c.q:
+      if e.isList: v.add e.members
+    c.v = v
+    c.dd.add (c.r, c.v.len)
+  (c.r, c.v)
+
+proc find*[T](c: Cluster[T], k: int): (float, seq[seq[int]]) =
+  while c.k > k:
+    discard c.step()
+  (c.r, c.v)
 \end{lstlisting}
 
 Given a set of points, we can determine the most likely number of clusters representing the data, and we can make a plot of the number of clusters versus distance and look for a plateau in the plot. In correspondence with the plateau, we can read from the $y$-coordinate the number of clusters. This is done by the function {\ft cluster} in the preceding algorithm, which returns the average distance between clusters and a list of clusters.
 
 For example:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> def metric(a, b):
-...     return math.sqrt(sum((x-b[i]) ** 2 for i, x in enumerate(a)))
->>> points = [[random.gauss(i % 5, 0.3) for j in range(10)] for i in range(200)]
->>> c = Cluster(points, metric)
->>> r, clusters = c.find(1)  # cluster all points until one cluster only
->>> Canvas(title="clustering example", xlab="distance", ylab="number of clusters"
-...       ).plot(c.dd[150:]).save("clustering1.png")
->>> Canvas(title="clustering example (2d projection)", xlab="p[0]", ylab="p[1]"
-...       ).ellipses([p[:2] for p in points]).save("clustering2.png")
-\end{lstlisting}
-
-The same clustering can be performed using {\ft scipy}:
-
 \begin{lstlisting}
->>> import numpy as np
->>> from scipy.cluster.hierarchy import linkage, fcluster
->>> from scipy.spatial.distance import pdist
->>> points = np.array([[random.gauss(i % 5, 0.3) for j in range(10)]
-...                     for i in range(200)])
->>> Z = linkage(points, method='weighted')
->>> clusters = fcluster(Z, t=5, criterion='maxclust')
+proc metric(a, b: seq[float]): float =
+  for i in 0 ..< a.len: result += (a[i] - b[i]) ^ 2
+  result = sqrt(result)
+
+randomize()
+var points: seq[seq[float]] = @[]
+for i in 0 ..< 200:
+  var p = newSeq[float](10)
+  for j in 0 ..< 10:
+    p[j] = gauss(float(i mod 5), 0.3)
+  points.add p
+let c = newCluster[seq[float]](points, metric)
+let (r, clusters) = c.find(1)
+# Plot the dendrogram with nimpy + matplotlib (see appendix).
 \end{lstlisting}
 
 With our sample data, we obtain the following plot (``clustering1.png''):
@@ -4565,210 +4518,141 @@ The network is trained by providing an input and adjusting the characteristics $
 
 \index{class!NeuralNetwork}
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-class NeuralNetwork:
-    """
-    Back-Propagation Neural Networks
-    Placed in the public domain.
-    Original author: Neil Schemenauer <nas@arctrix.com>
-    Modified by: Massimo Di Pierro
-    Read more: http://www.ibm.com/developerworks/library/l-neural/
-    """
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+type
+  NeuralNetwork* = ref object
+    ni*, nh*, no*: int
+    ai*, ah*, ao*: seq[float]
+    wi*, wo*: Matrix       # weights
+    ci*, co*: Matrix       # last weight change (momentum)
 
-    @staticmethod
-    def rand(a, b):
-        """ calculate a random number where:  a <= rand < b """
-        return (b-a) * random.random() + a
+proc nnRand(a, b: float): float = (b - a) * rand(1.0) + a
+proc sigmoid(x: float): float = tanh(x)
+proc dsigmoid(y: float): float = 1.0 - y * y
 
-    @staticmethod
-    def sigmoid(x):
-        """ our sigmoid function, tanh is a little nicer than the standard 1/(1+e^-x) """
-        return math.tanh(x)
+proc newNeuralNetwork*(ni, nh, no: int): NeuralNetwork =
+  result = NeuralNetwork(
+    ni: ni + 1,    # +1 for bias node
+    nh: nh,
+    no: no,
+    ai: newSeqWith(ni + 1, 1.0),
+    ah: newSeqWith(nh, 1.0),
+    ao: newSeqWith(no, 1.0),
+    wi: newMatrix(ni + 1, nh,
+                  proc(r, c: int): float = nnRand(-0.2, 0.2)),
+    wo: newMatrix(nh, no,
+                  proc(r, c: int): float = nnRand(-2.0, 2.0)),
+    ci: newMatrix(ni + 1, nh),
+    co: newMatrix(nh, no))
 
-    @staticmethod
-    def dsigmoid(y):
-        """  # derivative of our sigmoid function, in terms of the output """
-        return 1.0 - y ** 2
+proc update*(n: NeuralNetwork, inputs: seq[float]): seq[float] =
+  if inputs.len != n.ni - 1:
+    raise newException(ValueError, "wrong number of inputs")
+  for i in 0 ..< n.ni - 1:
+    n.ai[i] = inputs[i]
+  for j in 0 ..< n.nh:
+    var s = 0.0
+    for i in 0 ..< n.ni: s += n.ai[i] * n.wi[i, j]
+    n.ah[j] = sigmoid(s)
+  for k in 0 ..< n.no:
+    var s = 0.0
+    for j in 0 ..< n.nh: s += n.ah[j] * n.wo[j, k]
+    n.ao[k] = sigmoid(s)
+  result = n.ao
 
-    def __init__(self, ni, nh, no):
-         # number of input, hidden, and output nodes
-        self.ni = ni + 1  # +1 for bias node
-        self.nh = nh
-        self.no = no
+proc backPropagate*(n: NeuralNetwork, targets: seq[float],
+                    N, M: float): float =
+  if targets.len != n.no:
+    raise newException(ValueError, "wrong number of target values")
+  var outputDeltas = newSeq[float](n.no)
+  for k in 0 ..< n.no:
+    let error = targets[k] - n.ao[k]
+    outputDeltas[k] = dsigmoid(n.ao[k]) * error
+  var hiddenDeltas = newSeq[float](n.nh)
+  for j in 0 ..< n.nh:
+    var error = 0.0
+    for k in 0 ..< n.no: error += outputDeltas[k] * n.wo[j, k]
+    hiddenDeltas[j] = dsigmoid(n.ah[j]) * error
+  for j in 0 ..< n.nh:
+    for k in 0 ..< n.no:
+      let change = outputDeltas[k] * n.ah[j]
+      n.wo[j, k] = n.wo[j, k] + N * change + M * n.co[j, k]
+      n.co[j, k] = change
+  for i in 0 ..< n.ni:
+    for j in 0 ..< n.nh:
+      let change = hiddenDeltas[j] * n.ai[i]
+      n.wi[i, j] = n.wi[i, j] + N * change + M * n.ci[i, j]
+      n.ci[i, j] = change
+  var error = 0.0
+  for k in 0 ..< targets.len:
+    error += 0.5 * (targets[k] - n.ao[k]) ^ 2
+  return error
 
-         # activations for nodes
-        self.ai = [1.0] * self.ni
-        self.ah = [1.0] * self.nh
-        self.ao = [1.0] * self.no
+proc test*(n: NeuralNetwork, patterns: seq[(seq[float], seq[float])]) =
+  for p in patterns:
+    echo p[0], " -> ", n.update(p[0])
 
-         # create weights
-        self.wi = Matrix(self.ni, self.nh, fill=lambda r, c: self.rand(-0.2, 0.2))
-        self.wo = Matrix(self.nh, self.no, fill=lambda r, c: self.rand(-2.0, 2.0))
+proc weights*(n: NeuralNetwork) =
+  echo "Input weights:"
+  for i in 0 ..< n.ni:
+    var row: seq[float]
+    for j in 0 ..< n.nh: row.add n.wi[i, j]
+    echo row
+  echo ""
+  echo "Output weights:"
+  for j in 0 ..< n.nh:
+    var row: seq[float]
+    for k in 0 ..< n.no: row.add n.wo[j, k]
+    echo row
 
-         # last change in weights for momentum
-        self.ci = Matrix(self.ni, self.nh)
-        self.co = Matrix(self.nh, self.no)
-
-    def update(self, inputs):
-        if len(inputs) != self.ni-1:
-            raise ValueError("wrong number of inputs")
-
-         # input activations
-        for i in range(self.ni-1):
-            self.ai[i] = inputs[i]
-
-         # hidden activations
-        for j in range(self.nh):
-            s = sum(self.ai[i] * self.wi[i, j] for i in range(self.ni))
-            self.ah[j] = self.sigmoid(s)
-
-         # output activations
-        for k in range(self.no):
-            s = sum(self.ah[j] * self.wo[j, k] for j in range(self.nh))
-            self.ao[k] = self.sigmoid(s)
-        return self.ao[:]
-
-    def back_propagate(self, targets, N, M):
-        if len(targets) != self.no:
-            raise ValueError("wrong number of target values")
-
-         # calculate error terms for output
-        output_deltas = [0.0] * self.no
-        for k in range(self.no):
-            error = targets[k]-self.ao[k]
-            output_deltas[k] = self.dsigmoid(self.ao[k]) * error
-
-         # calculate error terms for hidden
-        hidden_deltas = [0.0] * self.nh
-        for j in range(self.nh):
-            error = sum(output_deltas[k] * self.wo[j, k] for k in range(self.no))
-            hidden_deltas[j] = self.dsigmoid(self.ah[j]) * error
-
-         # update output weights
-        for j in range(self.nh):
-            for k in range(self.no):
-                change = output_deltas[k] * self.ah[j]
-                self.wo[j, k] = self.wo[j, k] + N * change + M * self.co[j, k]
-                self.co[j, k] = change
-
-         # update input weights
-        for i in range(self.ni):
-            for j in range(self.nh):
-                change = hidden_deltas[j] * self.ai[i]
-                self.wi[i, j] = self.wi[i, j] + N * change + M * self.ci[i, j]
-                self.ci[i, j] = change
-
-         # calculate error
-        error = sum(0.5 * (targets[k]-self.ao[k]) ** 2 for k in range(len(targets)))
-        return error
-
-    def test(self, patterns):
-        for p in patterns:
-            print(p[0], "->", self.update(p[0]))
-
-    def weights(self):
-        print("Input weights:")
-        for i in range(self.ni):
-            print(self.wi[i])
-        print()
-        print("Output weights:")
-        for j in range(self.nh):
-            print(self.wo[j])
-
-    def train(self, patterns, iterations=1000, N=0.5, M=0.1, check=False):
-         # N: learning rate
-         # M: momentum factor
-        for i in range(iterations):
-            error = 0.0
-            for p in patterns:
-                inputs = p[0]
-                targets = p[1]
-                self.update(inputs)
-                error = error + self.back_propagate(targets, N, M)
-            if check and i % 100 == 0:
-                print("error %-14f" % error)
-\end{lstlisting}
-
-The same neural network can be implemented more efficiently using NumPy for vectorized operations:
-
-\begin{lstlisting}
-import numpy as np
-
-class NeuralNetworkNumPy:
-    def __init__(self, ni, nh, no):
-        self.ni, self.nh, self.no = ni + 1, nh, no
-        self.ai = np.ones(self.ni)
-        self.ah = np.ones(self.nh)
-        self.ao = np.ones(self.no)
-        self.wi = np.random.uniform(-0.2, 0.2, (self.ni, self.nh))
-        self.wo = np.random.uniform(-2.0, 2.0, (self.nh, self.no))
-        self.ci = np.zeros((self.ni, self.nh))
-        self.co = np.zeros((self.nh, self.no))
-
-    def update(self, inputs):
-        self.ai[:self.ni-1] = inputs
-        self.ah = np.tanh(self.ai @ self.wi)
-        self.ao = np.tanh(self.ah @ self.wo)
-        return self.ao.copy()
-
-    def back_propagate(self, targets, N, M):
-        targets = np.array(targets)
-        output_deltas = (1 - self.ao ** 2) * (targets - self.ao)
-        hidden_deltas = (1 - self.ah ** 2) * (output_deltas @ self.wo.T)
-        change = np.outer(self.ah, output_deltas)
-        self.wo += N * change + M * self.co; self.co = change
-        change = np.outer(self.ai, hidden_deltas)
-        self.wi += N * change + M * self.ci; self.ci = change
-        return 0.5 * np.sum((targets - self.ao) ** 2)
-
-    def train(self, patterns, iterations=1000, N=0.5, M=0.1):
-        for i in range(iterations):
-            for p in patterns:
-                self.update(p[0])
-                self.back_propagate(p[1], N, M)
-\end{lstlisting}
-
-Using {\ft scikit-learn}, a neural network follows the same {\ft fit/predict} pattern as linear regression. The {\ft MLPClassifier} (for classification) and {\ft MLPRegressor} (for regression) wrap a multi-layer perceptron with the same interface: call {\ft fit(X, y)} with the training data, then {\ft predict(X\_new)} for predictions. Internally, scikit-learn handles weight initialization, backpropagation, and convergence---the user only specifies the architecture (number and size of hidden layers) and hyperparameters.
-
-\begin{lstlisting}
->>> from sklearn.neural_network import MLPClassifier
->>> import numpy as np
->>> X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
->>> y = np.array([0, 1, 1, 0])  # XOR
->>> model = MLPClassifier(hidden_layer_sizes=(4,), activation='tanh',
-...                       max_iter=2000, random_state=1)
->>> model.fit(X, y)
->>> model.predict(X)
-array([0, 1, 1, 0])
->>> model.predict_proba(X)  # class probabilities
+proc train*(n: NeuralNetwork,
+            patterns: seq[(seq[float], seq[float])],
+            iterations = 1000, N = 0.5, M = 0.1,
+            check = false) =
+  for i in 0 ..< iterations:
+    var error = 0.0
+    for p in patterns:
+      discard n.update(p[0])
+      error += n.backPropagate(p[1], N, M)
+    if check and i mod 100 == 0:
+      echo "error ", error
 \end{lstlisting}
 
 In the following example, we teach the network the XOR function, and we create a network with two inputs, two intermediate neurons, and one output. We train it and check what it learned:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
->>> pat = [[[0, 0], [0]], [[0, 1], [1]], [[1, 0], [1]], [[1, 1], [0]]]
->>> n = NeuralNetwork(2, 2, 1)
->>> n.train(pat)
->>> n.test(pat)
-[0, 0] -> [0.00...]
-[0, 1] -> [0.98...]
-[1, 0] -> [0.98...]
-[1, 1] -> [-0.00...]
+\begin{lstlisting}
+let pat = @[(@[0.0, 0.0], @[0.0]),
+            (@[0.0, 1.0], @[1.0]),
+            (@[1.0, 0.0], @[1.0]),
+            (@[1.0, 1.0], @[0.0])]
+let n = newNeuralNetwork(2, 2, 1)
+n.train(pat)
+n.test(pat)
+# @[0.0, 0.0] -> @[0.00...]
+# @[0.0, 1.0] -> @[0.98...]
+# @[1.0, 0.0] -> @[0.98...]
+# @[1.0, 1.0] -> @[-0.00...]
 \end{lstlisting}
 
 Now, we use our neural network to learn patterns in stock prices and predict the next day return. We then check what it has learned, comparing the sign of the prediction with the sign of the actual return for the same days used to train the network:
-%%% META:FILE:test.py
-\begin{lstlisting}[caption={in file: {\ft test.py}}]
->>> storage = PersistentDictionary("sp100.sqlite")
->>> v = [day["arithmetic_return"] * 300 for day in storage["AAPL/2011"][1:]]
->>> pat = [[v[i:i+5], [v[i+5]]] for i in range(len(v)-5)]
->>> n = NeuralNetwork(5, 5, 1)
->>> n.train(pat)
->>> predictions = [n.update(item[0]) for item in pat]
->>> success_rate = sum(1.0 for i, e in enumerate(predictions)
-...                    if e[0] * v[i+5]>0)/len(pat)
+%%% META:FILE:test.nim
+\begin{lstlisting}[caption={in file: {\ft test.nim}}]
+let storage = newPersistentDictionary("sp100.sqlite")
+var v: seq[float] = @[]
+for day in storage["AAPL/2011"][1 .. ^1]:
+  v.add day["arithmetic_return"].getFloat * 300.0
+var pat: seq[(seq[float], seq[float])] = @[]
+for i in 0 ..< v.len - 5:
+  pat.add (v[i ..< i + 5], @[v[i + 5]])
+let n = newNeuralNetwork(5, 5, 1)
+n.train(pat)
+var predictions: seq[seq[float]] = @[]
+for item in pat: predictions.add n.update(item[0])
+var hits = 0.0
+for i, e in predictions:
+  if e[0] * v[i + 5] > 0: hits += 1.0
+let successRate = hits / float(pat.len)
 \end{lstlisting}
 The learning process depends on the random number generator; therefore, sometimes, for this small training data set, the network succeeds in predicting the sign of the next day arithmetic return of the stock with more than 50\% probability, and sometimes it does not. We leave it to the reader to study the significance of this result but using a different subset of the data for the training of the network and for testing its success rate.
 
@@ -4790,51 +4674,72 @@ In the following example, the fitness is measured by the similarity between a ch
 
 \index{class!Chromosome}
 
-%%% META:FILE:genetic.py
-\begin{lstlisting}
-from random import randint, choice
+%%% META:FILE:genetic.nim
+\begin{lstlisting}[caption={in file: {\ft genetic.nim}}]
+import std/[random, algorithm, sequtils]
 
-class Chromosome:
-    alphabet = "ATGC"
-    size = 32
-    mutations = 2
-    def __init__(self, father=None, mother=None):
-        if not father or not mother:
-            self.dna = [choice(self.alphabet) for i in range(self.size)]
-        else:
-            self.dna = father.dna[:self.size/2]+mother.dna[self.size/2:]
-            for mutation in range(self.mutations):
-                self.dna[randint(0, self.size-1)] = choice(self.alphabet)
-    def fitness(self, target):
-        return sum(1 for i, c in enumerate(self.dna) if c == target.dna[i])
+const
+  ALPHABET = "ATGC"
+  SIZE = 32
+  MUTATIONS = 2
 
-def top(population, target, n=10):
-    table = [(chromo.fitness(target), chromo) for chromo in population]
-    table.sort(reverse = True)
-    return [row[1] for row in table][:n]
+type
+  Chromosome* = ref object
+    dna*: string
 
-def oneof(population):
-    return population[randint(0, len(population)-1)]
+proc randomChar(): char = ALPHABET[rand(ALPHABET.len - 1)]
 
-def main():
-    GENERATIONS = 10000
-    OFFSPRING = 20
-    SEEDS = 20
-    TARGET = Chromosome()
+proc newChromosome*(): Chromosome =
+  result = Chromosome(dna: newString(SIZE))
+  for i in 0 ..< SIZE: result.dna[i] = randomChar()
 
-    population = [Chromosome() for i in range(SEEDS)]
-    for i in range(GENERATIONS):
-        print("\n\nGENERATION:", i)
-        print(0, TARGET.dna)
-        fittest = top(population, TARGET)
-        for chromosome in fittest: print(i, chromosome.dna)
-        if max(chromo.fitness(TARGET) for chromo in fittest) == Chromosome.size:
-            print("SOLUTION FOUND")
-            break
-        population = [Chromosome(father=oneof(fittest), mother=oneof(fittest)) \
-                      for i in range(OFFSPRING)]
+proc newChromosome*(father, mother: Chromosome): Chromosome =
+  result = Chromosome(
+    dna: father.dna[0 ..< SIZE div 2] & mother.dna[SIZE div 2 .. ^1])
+  for _ in 0 ..< MUTATIONS:
+    result.dna[rand(SIZE - 1)] = randomChar()
 
-if __name__ == "__main__": main()
+proc fitness*(c, target: Chromosome): int =
+  for i, ch in c.dna:
+    if ch == target.dna[i]: inc result
+
+proc top*(population: seq[Chromosome], target: Chromosome,
+          n = 10): seq[Chromosome] =
+  var table: seq[(int, Chromosome)] = @[]
+  for chromo in population:
+    table.add (chromo.fitness(target), chromo)
+  table.sort(proc(a, b: (int, Chromosome)): int = cmp(b[0], a[0]))
+  for i in 0 ..< min(n, table.len):
+    result.add table[i][1]
+
+proc oneof*(population: seq[Chromosome]): Chromosome =
+  population[rand(population.len - 1)]
+
+proc main() =
+  const GENERATIONS = 10000
+  const OFFSPRING = 20
+  const SEEDS = 20
+  let target = newChromosome()
+
+  var population: seq[Chromosome] = @[]
+  for _ in 0 ..< SEEDS: population.add newChromosome()
+  for i in 0 ..< GENERATIONS:
+    echo "\n\nGENERATION: ", i
+    echo 0, " ", target.dna
+    let fittest = top(population, target)
+    for chromosome in fittest: echo i, " ", chromosome.dna
+    var best = 0
+    for chromo in fittest: best = max(best, chromo.fitness(target))
+    if best == SIZE:
+      echo "SOLUTION FOUND"
+      break
+    population = @[]
+    for _ in 0 ..< OFFSPRING:
+      population.add newChromosome(oneof(fittest), oneof(fittest))
+
+when isMainModule:
+  randomize()
+  main()
 \end{lstlisting}
 
 Notice that this algorithm can easily be modified to accommodate other fitness metrics and DNA that consists of a data structure other than a sequence of ``ATGC'' symbols. The only trickery is finding a proper mating algorithm that preserves some of the fitness features of the parents in the DNA of their offspring. If this does not happen, each next generation loses the fitness properties gained by its parents, thus causing the algorithm not to converge. In our case, it works because if the parents are ``close'' to the target, then half of the DNA of each parent is also close to the corresponding half of the target DNA. Therefore the DNA of the offspring is as fit as the average of their parents. On top of this, the two random mutations allow the algorithm to further explore the space of all possible DNA sequences.
@@ -5705,8 +5610,6 @@ First, we define a class representing a matrix:
 
 \index{class!Matrix}
 
-%%%% FIXME, MAYBE USE numpy
-
 %%% META:FILE:nlib.py
 \begin{lstlisting}[caption={in file: {\ft nlib.py}}]
 class Matrix(object):
@@ -5972,19 +5875,6 @@ In the following code, we consider an image (a set of points) containing a circl
 >>> f(B2, points, "la6.png")
 \end{lstlisting}
 
-The same transformations can be expressed more efficiently using NumPy:
-
-\begin{lstlisting}
->>> import numpy as np
->>> t = np.linspace(0, 2 * np.pi, 200)
->>> circle = np.column_stack([np.cos(t), np.sin(t)])
->>> xaxis = np.column_stack([np.linspace(0, 1, 50), np.zeros(50)])
->>> yaxis = np.column_stack([np.zeros(50), np.linspace(0, 1, 50)])
->>> points = np.vstack([circle, xaxis, yaxis])
->>> A1 = np.array([[0.2, 0], [0, 1]])
->>> transformed = points @ A1.T  # matrix multiplication on all points at once
-\end{lstlisting}
-
 \newpage
 
 \begin{figure}[ht]
@@ -6203,19 +6093,6 @@ We can also obtain a column vector by performing a transposition of a row vector
 >>> b = Matrix([[3, 6, 10]]).T
 \end{lstlisting}
 
-Using NumPy, linear systems are solved more efficiently:
-
-\begin{lstlisting}
->>> import numpy as np
->>> A = np.array([[1, 2, 2], [4, 4, 2], [4, 6, 4]], dtype=float)
->>> b = np.array([3, 6, 10], dtype=float)
->>> x = np.linalg.solve(A, b)
->>> print(x)
-[-1.  3. -1.]
->>> # Matrix inverse (when needed):
->>> A_inv = np.linalg.inv(A)
-\end{lstlisting}
-
 \goodbreak\subsection{Norm and condition number again}
 
 \index{matrix!norm}\index{condition number}\index{matrix!condition number}
@@ -6271,22 +6148,6 @@ def norm(A, p=1):
              raise NotImplementedError
     else:
         return abs(A)
-\end{lstlisting}
-
-In NumPy, norms are computed directly:
-
-\begin{lstlisting}
->>> import numpy as np
->>> a = np.array([1.0, 2.0, 3.0])
->>> np.linalg.norm(a, ord=1)       # 1-norm of a vector
-6.0
->>> np.linalg.norm(a, ord=2)       # 2-norm of a vector
-3.741...
->>> A = np.array([[1, 2], [3, 4]])
->>> np.linalg.norm(A, ord=1)       # 1-norm of a matrix
-6.0
->>> np.linalg.cond(A, p=1)         # condition number
-21.0
 \end{lstlisting}
 
 Now we can implement a function that computes the condition number for ordinary functions as well as for linear transformations represented by a matrix:
@@ -6439,15 +6300,6 @@ Here is an example of how to use it:
 
 The {\ft RandomList} is a generator. You can iterate over it. The {\ft yield} keyword is used like {\ft return}, except the function will return a generator.
 
-Using NumPy, the Cholesky decomposition and correlated random vector generation are built-in:
-
-\begin{lstlisting}
->>> import numpy as np
->>> A = np.array([[1.0, 0.1], [0.2, 3.0]])
->>> L = np.linalg.cholesky(A)
->>> samples = L @ np.random.randn(2, 1000)  # 1000 correlated random vectors
-\end{lstlisting}
-
 \goodbreak\subsection{Modern portfolio theory}
 
 \index{Modern Portfolio Theory}\index{tangency portfolio}\index{Markowitz}\index{Sharpe ratio}
@@ -6542,25 +6394,6 @@ we compute the tangent portfolio (highest Sharpe ratio), its return, and its ris
 0.25
 0.233333333333
 0.25
-\end{lstlisting}
-
-The same portfolio optimization using NumPy:
-
-\begin{lstlisting}
->>> import numpy as np
->>> cov = np.array([[0.04, 0.006, 0.02],
-...                 [0.006, 0.09, 0.06],
-...                 [0.02, 0.06, 0.16]])
->>> mu = np.array([0.10, 0.12, 0.15])
->>> r_free = 0.05
->>> x = np.linalg.solve(cov, mu - r_free)
->>> x = x / x.sum()
->>> portfolio_return = mu @ x
->>> portfolio_risk = np.sqrt(x @ cov @ x)
->>> print(x)
-[0.5566... 0.2750... 0.1682...]
->>> print(portfolio_return, portfolio_risk)
-0.1139... 0.1867...
 \end{lstlisting}
 
 Investing 55\% in asset 0, 27\% in asset 1, and 16\% in asset 2, the resulting portfolio has an expected return of 11.39\% and a risk of 18.67\%, which corresponds to a Sharpe ratio of 0.34, much higher than 0.25, 0.23, and 0.23 for the individual assets.
@@ -6687,39 +6520,6 @@ CUBIC    = POLYNOMIAL(3)
 QUARTIC  = POLYNOMIAL(4)
 \end{lstlisting}
 
-In NumPy, least squares fitting is available directly:
-
-\begin{lstlisting}
->>> import numpy as np
->>> points = [(k, 5 + 0.8*k + 0.3*k*k + np.sin(k), 2) for k in range(100)]
->>> x = np.array([p[0] for p in points], dtype=float)
->>> y = np.array([p[1] for p in points], dtype=float)
->>> dy = np.array([p[2] for p in points], dtype=float)
->>> # Build design matrix for quadratic fit, weighted by 1/dy
->>> A = np.column_stack([np.ones_like(x), x, x**2]) / dy[:, None]
->>> b = y / dy
->>> c, residuals, rank, sv = np.linalg.lstsq(A, b, rcond=None)
->>> # Or simply use numpy.polyfit for polynomial fits:
->>> c_poly = np.polyfit(x, y, deg=2, w=1.0/dy)
-\end{lstlisting}
-
-The same fit can be performed using {\ft scikit-learn}. All scikit-learn estimators follow the {\ft fit/predict} pattern: we create a model object, call {\ft model.fit(X, y)} to train it on feature matrix $X$ and target vector $y$, and then call {\ft model.predict(X\_new)} to generate predictions for new data. This uniform interface applies to every estimator in the library---linear regression, neural networks, decision trees, support vector machines, and so on---making it easy to swap models without changing the surrounding code. The feature matrix $X$ is always two-dimensional (rows are samples, columns are features), while $y$ is a one-dimensional target vector.
-
-\begin{lstlisting}
->>> import numpy as np
->>> from sklearn.linear_model import LinearRegression
->>> from sklearn.preprocessing import PolynomialFeatures
->>> x = np.arange(100, dtype=float).reshape(-1, 1)  # column vector
->>> y = 5 + 0.8*x.ravel() + 0.3*x.ravel()**2 + np.sin(x.ravel())
->>> # PolynomialFeatures transforms x into [1, x, x^2]
->>> poly = PolynomialFeatures(degree=2)
->>> X = poly.fit_transform(x)
->>> model = LinearRegression()
->>> model.fit(X, y)                  # train the model
->>> y_pred = model.predict(X)        # predict on same or new data
->>> print(model.coef_)               # fitted coefficients
-\end{lstlisting}
-
 As an example, we can use it to perform a polynomial fit: given a set of points, we want to find the coefficients of a polynomial that best approximate those points.
 
 In other words, we want to find the $c_i$ such that, given $t_j$ and $o_j$, 
@@ -6843,20 +6643,6 @@ def fake_stock_prices(start_price=100, average_return=0.05, volatility=0.30, day
 \end{lstlisting}
 
 If {\ft strategy\_profit} > {\ft naive\_profit} then our strategy outperforms the naive buy and hold strategy.
-
-Using NumPy, the fake stock price generation is vectorized:
-
-\begin{lstlisting}
->>> import numpy as np
->>> def fake_stock_prices_np(start_price=100, average_return=0.05,
-...                          volatility=0.30, days=100):
-...     daily_vol = volatility / np.sqrt(250)
-...     daily_ret = average_return / 250
-...     s = np.random.normal(0, daily_vol, days - 1)
-...     mu = daily_ret - s.mean()
-...     log_returns = np.concatenate([[0], np.cumsum(mu + s)])
-...     return start_price * np.exp(log_returns)
-\end{lstlisting}
 
 Of course, we can always engineer a strategy based on historical data that will outperform holding the stock, but {\it past performance is never a guarantee of future performance}.
 
@@ -7022,18 +6808,6 @@ Here is an example that shows, for a particular case, the relation between the i
 True
 \end{lstlisting}
 
-In NumPy, eigenvalue decomposition is built-in and highly optimized (using LAPACK):
-
-\begin{lstlisting}
->>> import numpy as np
->>> A = np.array([[1, -2], [1, 4]], dtype=float)
->>> eigenvalues, eigenvectors = np.linalg.eigh(A)  # for symmetric matrices
->>> # For general matrices use np.linalg.eig(A)
->>> # Verify: A = U @ diag(e) @ U.T
->>> np.allclose(eigenvectors @ np.diag(eigenvalues) @ eigenvectors.T, A)
-True
-\end{lstlisting}
-
 Eigenvalues can be used to filter noise out of data and find hidden dependencies in data. Following are some examples.
 
 \goodbreak\subsection{Principal component analysis}
@@ -7062,24 +6836,6 @@ def compute_correlation_matrix(v):
              (sum(v[i][k] * v[j][k] for k in range(1, n))/n - mus[i] * mus[j])/ \
              math.sqrt(var[i] * var[j]))
     return corr
-\end{lstlisting}
-
-Using NumPy, correlation matrices and PCA are straightforward:
-
-\begin{lstlisting}
->>> import numpy as np
->>> v = np.array(stocks)          # shape (m, n): m time series of length n
->>> corr = np.corrcoef(v)         # correlation matrix
->>> eigenvalues, eigenvectors = np.linalg.eigh(corr)
-\end{lstlisting}
-
-Alternatively, {\ft scikit-learn} provides a dedicated PCA implementation:
-
-\begin{lstlisting}
->>> from sklearn.decomposition import PCA
->>> pca = PCA()
->>> pca.fit(v.T)  # transpose: samples as rows
->>> pca.explained_variance_ratio_
 \end{lstlisting}
 
 We use the preceding function to compute the correlation and pass it as input to the Jacobi algorithm and plot the output eigenvalues:
@@ -7198,20 +6954,6 @@ def invert_bicgstab(f, x, ap=1e-4, rp=1e-4, ns=200):
 \end{lstlisting}
 
 Notice that the minimum residual and the stabilized biconjugate gradient, if they converge, converge to the same value.
-
-SciPy provides optimized sparse solvers that handle these cases efficiently:
-
-\begin{lstlisting}
->>> import numpy as np
->>> from scipy import sparse
->>> from scipy.sparse.linalg import spsolve, bicgstab as sp_bicgstab
->>> # Build a sparse matrix (e.g., tridiagonal)
->>> n = 100
->>> A = sparse.diags([-1, 2, -1], [-1, 0, 1], shape=(n, n), format='csc')
->>> b = np.ones(n)
->>> x = spsolve(A, b)                    # direct sparse solver
->>> x2, info = sp_bicgstab(A, b)         # iterative BiCGSTAB solver
-\end{lstlisting}
 
 As an example, consider the following. We take a picture using a camera, but we take the picture out of focus. The image is represented by a set of $m^2$ pixels. The defocusing operation can be modeled as a first approximation with a linear operator acting on the ``true'' image, $x$, and turning it into an ``out of focus'' image, $y$. We can store the pixels in a one-dimensional vector (both for $x$ and $y$) as opposed to a matrix by mapping the pixel $(r, c)$ into vector component $i$ using the relation $(r, c) = (i/m, i\%m)$.
 
@@ -7374,17 +7116,6 @@ Here is how to use it:
 >>> def f(x): return (x-2) * (x-5)
 >>> round(solve_bisection(f, 1.0, 3.0), 4)
 2.0
-\end{lstlisting}
-
-SciPy provides optimized root-finding and minimization methods:
-
-\begin{lstlisting}
->>> from scipy.optimize import brentq, minimize_scalar
->>> def f(x): return (x-2) * (x-5)
->>> brentq(f, 1.0, 3.0)             # root finding
-2.0
->>> minimize_scalar(f, bracket=(1, 3, 5)).x   # minimization
-3.5
 \end{lstlisting}
 
 \goodbreak\subsection{Newton method}
@@ -7627,16 +7358,6 @@ Here is an example:
 (2.0, 8.0, 5.0)
 \end{lstlisting}
 
-For symbolic partial derivatives, SymPy computes exact results:
-
-\begin{lstlisting}
->>> import sympy
->>> x0, x1, x2 = sympy.symbols('x0 x1 x2')
->>> f = 2.0 * x0 + 3.0 * x1 + 5.0 * x1 * x2
->>> sympy.diff(f, x0), sympy.diff(f, x1), sympy.diff(f, x2)
-(2.0, 5.0*x2 + 3.0, 5.0*x1)
-\end{lstlisting}
-
 \goodbreak\subsection{Jacobian, gradient, and Hessian}
 
 \index{Jacobian}\index{Gradient}\index{Hessian}
@@ -7787,18 +7508,6 @@ Here is an example:
 [[1.9999999..., 7.999999..., 4.9999999...], [1.9999999..., 0.0, 0.0]]
 \end{lstlisting}
 
-SymPy can compute exact Jacobians symbolically:
-
-\begin{lstlisting}
->>> import sympy
->>> x0, x1, x2 = sympy.symbols('x0 x1 x2')
->>> f0 = 2.0*x0 + 3.0*x1 + 5.0*x1*x2
->>> f1 = 2.0*x0
->>> J = sympy.Matrix([f0, f1]).jacobian([x0, x1, x2])
->>> J.subs([(x0, 1), (x1, 1), (x2, 1)])
-Matrix([[2.0, 8.0, 5.0], [2.0, 0, 0]])
-\end{lstlisting}
-
 \goodbreak\subsection{Newton method (solver)}
 
 \index{Newton solver!multidimensional}
@@ -7836,15 +7545,6 @@ Here is an example:
 >>> def f(x): return [x[0]+x[1], x[0]+x[1] ** 2-2]
 >>> solve_newton_multi(f, x=(0, 0))
 [1.0..., -1.0...]
-\end{lstlisting}
-
-SciPy provides optimized multidimensional root finders:
-
-\begin{lstlisting}
->>> from scipy.optimize import fsolve
->>> def f(x): return [x[0]+x[1], x[0]+x[1]**2-2]
->>> fsolve(f, x0=[0, 0])
-array([ 1., -1.])
 \end{lstlisting}
 
 \goodbreak\subsection{Newton method (optimize)}
@@ -7889,17 +7589,6 @@ def optimize_newton_multi(f, x, ap=1e-6, rp=1e-4, ns=20):
 >>> def f(x): return (x[0]-2) ** 2+(x[1]-3) ** 2
 >>> optimize_newton_multi(f, x=(0, 0))
 [2.0, 3.0]
-\end{lstlisting}
-
-SciPy provides optimized multidimensional minimizers:
-
-\begin{lstlisting}
->>> from scipy.optimize import minimize
->>> def f(x): return (x[0]-2)**2 + (x[1]-3)**2
->>> result = minimize(f, x0=[0, 0], method='Newton-CG',
-...                   jac=lambda x: [2*(x[0]-2), 2*(x[1]-3)])
->>> result.x
-array([2., 3.])
 \end{lstlisting}
 
 \goodbreak\subsection{Improved Newton method (optimize)}
@@ -8062,19 +7751,6 @@ Here is an example:
 [0.999..., 2.000..., 300.000..., 10.000...] ...
 \end{lstlisting}
 
-SciPy provides {\ft curve\_fit} for nonlinear fitting:
-
-\begin{lstlisting}
->>> import numpy as np
->>> from scipy.optimize import curve_fit
->>> x = np.arange(1, 10, dtype=float)
->>> y = x + 2.0*x**2 + 300.0/(x + 10)
->>> dy = np.full_like(x, 2.0)
->>> def model(x, a, b, c, d): return a*x + b*x**2 + c/(x + d)
->>> popt, pcov = curve_fit(model, x, y, sigma=dy, p0=[1, 1, 100, 5])
->>> print(popt)  # [1., 2., 300., 10.]
-\end{lstlisting}
-
 \index{a priori}\index{Bayesian statistics}
 
 In the preceding implementation, we added a somewhat mysterious argument {\ft constraint}. This is a function of $\mathbf{b}$, and its output gets added to the value of $\chi^2$, which we are minimizing. By choosing the appropriate function, we can set constraints about the expected values $b$. These constraints represent a priori knowledge about the parameters, that is, knowledge that does not come from the data being fitted.
@@ -8226,19 +7902,6 @@ Here is an example of usage:
 1.991...
 \end{lstlisting}
 
-SciPy provides optimized numerical integration routines:
-
-\begin{lstlisting}
->>> from scipy import integrate
->>> from math import sin
->>> result, error = integrate.quad(sin, 0, 3)
->>> print(round(result, 4))
-1.9899
->>> # For fixed-order quadrature:
->>> integrate.fixed_quad(sin, 0, 3, n=4)
-(1.9899..., None)
-\end{lstlisting}
-
 \newpage
 \section{Fourier transforms}
 
@@ -8365,17 +8028,6 @@ def anti_fourier(v):
 \end{lstlisting}
 
 Here $1j$ is the Python notation for $I$ and $cexp$ is the exponential function for complex numbers.
-
-NumPy provides a highly optimized FFT implementation:
-
-\begin{lstlisting}
->>> import numpy as np
->>> u = np.array([1.0, 2.0, 3.0, 4.0])
->>> v = np.fft.fft(u) / np.sqrt(len(u))     # forward Fourier transform
->>> u_back = np.fft.ifft(v) * np.sqrt(len(u))  # inverse transform
->>> np.allclose(u, u_back.real)
-True
-\end{lstlisting}
 
 Notice how the transformation works even when $\mathbf{u}$ is a vector of complex numbers.
 
@@ -8528,18 +8180,6 @@ where
 \mathbf{k}_3 &=& F(\mathbf{y}+h k_2/2, x+h/2) \\
 \mathbf{k}_4 &=& F(\mathbf{y}+h k_3, x+h)
 \end{eqnarray}
-
-SciPy provides ODE solvers including Runge--Kutta methods:
-
-\begin{lstlisting}
->>> import numpy as np
->>> from scipy.integrate import solve_ivp
->>> # Example: y'' - 4y' + y = sin(x), rewritten as a system
->>> def F(x, y): return [y[1], 4*y[1] - y[0] + np.sin(x)]
->>> sol = solve_ivp(F, [0, 10], y0=[0, 1], method='RK45', dense_output=True)
->>> x = np.linspace(0, 10, 100)
->>> y = sol.sol(x)[0]  # solution f(x) evaluated at 100 points
-\end{lstlisting}
 
 \chapter{Probability and Statistics}
 
@@ -8740,20 +8380,6 @@ As an example, let"s consider a simple bet on a dice. We roll the dice once and 
 
 The average expected payoff is $-0.83...$, which means that on average, we should expect to lose 83 cents at this game.
 
-Using NumPy, these statistical functions operate directly on arrays:
-
-\begin{lstlisting}
->>> import numpy as np
->>> S = np.array([1, 2, 3, 4, 5, 6])
->>> np.mean(S)
-3.5
->>> np.std(S)
-1.707...
->>> payoff = np.where(S == 6, 20.0, -5.0)
->>> np.mean(payoff)
--0.8333...
-\end{lstlisting}
-
 \goodbreak\subsection{Continuous random variables}
 \index{continuous random variable}
 \index{cumulative distribution function}
@@ -8913,20 +8539,6 @@ def correlation(X, Y):
     return covariance(X, Y)/sd(X)/sd(Y)
 \end{lstlisting}
 
-NumPy computes covariance and correlation directly:
-
-\begin{lstlisting}
->>> import numpy as np
->>> X = np.array([1.0, 2.0, 3.0, 4.0])
->>> Y = np.array([2.0, 4.0, 5.0, 7.0])
->>> np.cov(X, Y, bias=True)      # covariance matrix
-array([[1.25 , 1.625],
-       [1.625, 2.6875]])
->>> np.corrcoef(X, Y)             # correlation matrix
-array([[1.        , 0.88660..],
-       [0.88660.., 1.        ]])
-\end{lstlisting}
-
 \goodbreak\subsection{Strong law of large numbers}
 
 If $X_1, X_2, ...X_n$ are a sequence of independent and identically
@@ -8964,16 +8576,6 @@ We can numerically verify this for the simple case in which $X_i$ are uniform ra
 ...       ).hist(make_set(4), legend="N=4").save("images/central4.png")
 >>> Canvas(title="Central Limit Theorem", xlab="y", ylab="p(y)"
 ...       ).hist(make_set(8), legend="N=8").save("images/central8.png")
-\end{lstlisting}
-
-Using NumPy, the same demonstration is vectorized:
-
-\begin{lstlisting}
->>> import numpy as np
->>> def make_set_np(n, m=10000):
-...     return np.random.uniform(-1, 1, (m, n)).mean(axis=1)
->>> samples = make_set_np(8)
->>> print(np.mean(samples), np.std(samples))  # mean near 0, std shrinks with n
 \end{lstlisting}
 
 \begin{figure}[ht]
@@ -10590,15 +10192,6 @@ def test_bin(nevents=1000, nbins=10):
 >>> test_bin()
 \end{lstlisting}
 
-NumPy provides {\ft histogram} for efficient binning:
-
-\begin{lstlisting}
->>> import numpy as np
->>> samples = np.random.uniform(0, 1, 1000)
->>> counts, edges = np.histogram(samples, bins=10, range=(0, 1))
->>> frequencies = counts / len(samples)
-\end{lstlisting}
-
 It produces the following output:
 \begin{lstlisting}
 i frequency[i]
@@ -10944,18 +10537,6 @@ Here is an example of usage:
 \end{lstlisting}
 
 In this example, the output consists of $\mu^-$, $\mu$, and $\mu^+$.
-
-Using NumPy, the bootstrap is vectorized:
-
-\begin{lstlisting}
->>> import numpy as np
->>> S = np.random.normal(2, 1, 100)
->>> resamples = np.random.choice(S, size=(100, len(S)), replace=True)
->>> means = resamples.mean(axis=1)
->>> means.sort()
->>> left, right = int(0.16 * 100), int(0.84 * 100)
->>> print(means[left], S.mean(), means[right])
-\end{lstlisting}
 
 Because $S$ contains 100 random Gaussian numbers, with average 2 and standard deviation 1, we expect $\mu$ to be close to 2. We get $1.89$. The bootstrap tells us that with 68\% probability, the true average of these numbers is indeed between $1.77$ and $2.00$. The uncertainty $(2.00-1.77)/2 = 0.12$ is compatible with $\sigma/\sqrt{100} = 1/10 = 0.10$.
 
@@ -11426,18 +11007,6 @@ Here is the Python code:
 >>> s.simulate_many()
 \end{lstlisting}
 
-Using NumPy, Monte Carlo integration is vectorized:
-
-\begin{lstlisting}
->>> import numpy as np
->>> N = 100000
->>> x = np.random.random((N, 4))
->>> mask = np.sum(x**2, axis=1) < 1
->>> values = np.sin(x[mask].sum(axis=1))
->>> integral = values.mean()
->>> error = values.std() / np.sqrt(mask.sum())
-\end{lstlisting}
-
 \goodbreak\section{Stochastic, Markov, Wiener, and processes}
 
 \index{stochastic process}
@@ -11677,15 +11246,6 @@ def BinomialSimulation(S0, u, d, p, n):
     return data
 \end{lstlisting}
 
-Using NumPy, many price paths can be simulated at once:
-
-\begin{lstlisting}
->>> import numpy as np
->>> def BinomialSimulation_np(S0, u, d, p, n, npaths=10000):
-...     moves = np.where(np.random.random((npaths, n)) < p, u, d)
-...     return S0 * np.cumprod(moves, axis=1)
-\end{lstlisting}
-
 The function takes the present spot value, $S_0$, of the asset, the values
 of $u, d$ and $p$, and the number of simulation steps and returns a list
 containing the simulated evolution of the stock price. Note that because of
@@ -11856,19 +11416,6 @@ main()
 \end{lstlisting}
 
 This code allows us to price any option simply by changing the payoff function.
-
-Using NumPy, many paths can be simulated simultaneously:
-
-\begin{lstlisting}
->>> import numpy as np
->>> npaths, nsteps = 100000, 90
->>> S0, mu, sigma, r, K = 100, 0.12/250, 0.30/np.sqrt(250), 0.05, 110
->>> log_returns = np.random.normal(mu, sigma, (npaths, nsteps))
->>> paths = S0 * np.exp(np.cumsum(log_returns, axis=1))
->>> payoffs = np.maximum(paths[:, -1] - K, 0)
->>> price = np.exp(-r/250 * nsteps) * payoffs.mean()
->>> error = np.exp(-r/250 * nsteps) * payoffs.std() / np.sqrt(npaths)
-\end{lstlisting}
 
 One can also change the model for the underlying using different assumptions. For example, a possible choice is that of including a model for market crashes, and on random days, separated by intervals given by the exponential distribution, assume a negative jump that follows the Pareto distribution (similar to the losses in our previous risk model). Of course, a change of the model requires a recalibration of the parameters.
 
@@ -12066,23 +11613,6 @@ def main(name="ising.png"):
 main()
 \end{lstlisting}
 
-
-Using NumPy, the spin lattice can be stored and updated more efficiently:
-
-\begin{lstlisting}
->>> import numpy as np
->>> n = 10
->>> s = np.ones((n, n, n), dtype=int)
->>> def ising_step_np(s, t, h):
-...     x, y, z = [np.random.randint(0, n) for _ in range(3)]
-...     neighbors = (s[(x-1)%n, y, z] + s[(x+1)%n, y, z] +
-...                  s[x, (y-1)%n, z] + s[x, (y+1)%n, z] +
-...                  s[x, y, (z-1)%n] + s[x, y, (z+1)%n])
-...     dE = -2.0 * s[x, y, z] * (h + neighbors)
-...     if dE > t * np.log(np.random.random()):
-...         s[x, y, z] *= -1
-...     return s.sum()
-\end{lstlisting}
 
 Fig.~\ref{ising-mag} shows how the spins tend to align in the direction of the external magnetic field, but the larger the temperature (left to right), the more random they are, and the average magnetization tends to zero. The higher the external magnetic field (bottom to top curves), the longer it takes for the transition from order (aligned spins) to chaos (random spins).
 
@@ -12678,15 +12208,6 @@ def scalar_product_test1(n, p):
 scalar_product_test(10, 2)
 \end{lstlisting}
 
-Using NumPy, the scalar product is a single operation:
-
-\begin{lstlisting}
->>> import numpy as np
->>> a = np.random.random(n)
->>> b = np.random.random(n)
->>> scalar = np.dot(a, b)  # or equivalently: a @ b
-\end{lstlisting}
-
 Most parallel algorithms follow a similar pattern. One process has access to IO. That process reads and scatters the data. The other processes perform their part of the computation; the results are reduced (aggregated) and sent back to the root process. This pattern may be repeated by multiple functions, perhaps in loops. Different functions may handle different data structure and may have different communication patterns. The one thing that must be constant throughout the run is the number of processes because one wants to pair each process with one computing unit.
 
  In the following, we implement a parallel version of the {\ft mergesort}. At each step, the code splits the problem into two smaller problems. Half of the problem is solved by the process that performed the split and assigns the other half to an existing free process. When there are no more free processes, it reverts to the nonparallel {\ft mergesort} step. The {\ft merge} function here is the same as the nonparallel {\ft mergesort} of chapter 3.
@@ -12934,14 +12455,6 @@ def random_adjacency_matrix(n):
             A[r][c] = A[c][r] = random.randint(1, 100)
     return A
 
-# NumPy equivalent:
-# import numpy as np
-# def random_adjacency_matrix_np(n):
-#     A = np.random.randint(1, 100, (n, n))
-#     A = (A + A.T) // 2      # make symmetric
-#     np.fill_diagonal(A, 0)  # zero diagonal
-#     return A
-
 class Vertex(object):
     def __init__(self, path=[0, 1, 2]):
         self.path = path
@@ -13034,28 +12547,6 @@ tree  & $\log p$ & $\log p$ & $p$
 \end{tabular}
 
 It is obvious that the completely connected is the fastest network but also the most expensive to build. The tree is a cheap compromise. The switch tends to be faster for arbitrary point-to-point communication, but the switch comes to a premium. Multidimensional meshes and toruses become cost-effective when solving problems that are naturally defined on a grid because they only require next neighbor interaction.
-
-\goodbreak\section{mpi4py}\index{mpi4py}
-
-The Psim emulator does not provide any actual speedup unless you have multiple cores or processors to execute the forked processes. A better approach would be to use {\ft mpi4py}~\cite{mpi4py} because it allows running different processes on different machines on a network. {\ft mpi4py} is a Python interface to the message passing interface (MPI). MPI is a standard protocol and API for interprocess communications. Its API are equivalent one by one to those of {\ft PSim}, except that they have different names and different signatures.
-
-Here is an example of using mpi4py:
-
-\begin{lstlisting}
-from mpi4py import MPI
-
-comm = MPI.COMM_WORLD
-rank = comm.Get_rank()
-
-if rank == 0:
-   message = "Hello World"
-   comm.send(message, dest=1, tag=11)
-elif rank == 1:
-   message = comm.recv(source=0, tag=11)
-   print(message)
-\end{lstlisting}
-
-The {\ft comm} object of class {\ft MPI.COMM\_WORLD} plays a similar role as the {\ft PSim} object of the previous section. The MPI {\ft send} and {\ft recv} functions are very similar to the {\ft PSim} equivalent ones, except that they require details about the type of the data being transferred and a communication tag. The tag allows node A to send multiple messages to B and allows B to receive them out of order. PSim does not allow tags.
 
 \goodbreak\section{Master-Worker and Map-Reduce}\index{map-reduce}\index{master}\index{worker}\index{asynchat}\index{asyncore}
 
@@ -13165,208 +12656,6 @@ You can run more than one worker, although for this example the server will term
 
 Function {\ft mincemeat} works fine for many applications, but sometimes one wishes for a more powerful tool that provides faster communications, support for arbitrary languages, and better scalability tools and monitoring tools. An example in Python is {\ft disco}. A standard tool, written in Java but supporting Python, is {\bf Hadoop}.
 
-\goodbreak\section{pyOpenCL}\index{CUDA}\index{OpenCL}
-
-Nvidia should be credited for bringing GPU computing to the mass market. They have developed the CUDA~\cite{cuda} framework for GPU programming. CUDA programs consist of two parts: a host and a kernel. The host deploys the kernel on the available GPU core, and multiple copies of the kernel run in parallel.
-
-Nvidia, AMD, Intel, and ARM have created the Kronos Group, and together they have developed the Open Common Language framework (OpenCL~\cite{opencl}), which borrows many ideas from CUDA and promises more portability. OpenCL supports
-Intel/AMD CPUs, Nvidia/ATI GPU, ARM chips, and the LLVM virtual machine.
-
-OpenCL is a C99 dialect. In OpenCL, like in CUDA, there is a host program and a kernel. Multiple copies of the kernel are queued and run in parallel on available devices. Kernels running on the same device have access to a shared memory area as well as local memory areas.
-
-A typical OpenCL program has the following structure:
-\begin{lstlisting}
-find available devices (GPUs, CPUs)
-copy data from host to device
-run N copies of this kernel code on the device
-copy data from device to host
-\end{lstlisting}
-
-Usually the kernel is written in C99, while the host is written in C++. It is also possible to write the host code in other languages, including Python. Here we will use the {\ft pyOpenCL}~\cite{pyopencl} module for programming the host using Python. This produces no significant loss of performance compared to C++ because the actual computation is performed by kernel, not by the host. It is also possible to write the kernels using Python using a library called Clyther~\cite{clyther} but this is not discussed here.
-
-\index{class!Device}
-
-First of all we implement a class {\ft Device} class in terms of {\ft pyOpenCL} API which will make our later code more readable.
-
-%%% META:FILE:device.py
-\begin{lstlisting}[caption={in file: {\ft device.py}}]
-import numpy
-import pyopencl as pcl
-
-class Device(object):
-    flags = pcl.mem_flags
-    def __init__(self):
-        self.ctx = pcl.create_some_context()
-        self.queue = pcl.CommandQueue(self.ctx)
-    def buffer(self, source=None, size=0, mode=pcl.mem_flags.READ_WRITE):
-        if source is not None: mode = mode|pcl.mem_flags.COPY_HOST_PTR
-        buffer = pcl.Buffer(self.ctx, mode, size=size, hostbuf=source)
-        return buffer
-    def retrieve(self, buffer, shape=None, dtype=numpy.float32):
-        output = numpy.zeros(shape or buffer.size//4, dtype=dtype)
-        pcl.enqueue_copy(self.queue, output, buffer)
-        return output
-    def compile(self, kernel):
-        return pcl.Program(self.ctx, kernel).build()
-\end{lstlisting}
-
-Here {\ft self.ctx} is the device context, {\ft self.queue} is the device queue. The functions {\ft buffer}, {\ft retrieve}, and {\ft compile} map onto the corresponding pyOpenCL functions {\ft Buffer}, {\ft enqueue\_copy}, and {\ft Program} but use a simpler syntax. For more details, we refer to the official {\ft pyOpenCL} documentation.
-
-\subsection{A first example with PyOpenCL}
-
-{\ft pyOpenCL} uses {\ft numpy} multidimensional arrays to store data. For example, here is a {\ft numpy} example that performs the scalar product between two vectors, $u$ and $v$:
-
-\begin{lstlisting}
-import numpy as npy
-
-size = 10000
-u = npy.random.rand(size).astype(npy.float32)
-v = npy.random.rand(size).astype(npy.float32)
-w = npy.zeros(n, dtype=numpy.float32)
-
-for i in range(0, n):
-    w[i] = u[i] + v[i];
-
-assert npy.linalg.norm(w - (u + v)) == 0
-\end{lstlisting}
-
-The program works as follows:
-\begin{itemize}
-\item It creates two {\ft numpy} arrays $u$ and $v$ of given size and filled with random numbers.
-\item It creates another {\ft numpy} array $w$ of the same size filled with zeros.
-\item It loops over all indices of $w$ and adds, term by term, $u$ and $v$ storing the result into $w$.
-\item It checks the result using the {\ft numpy} {\ft linalg} submodule.
-\end{itemize}
-
-Our goal is to parallelize the part of the computation performed in the loop. Notice that our parallelization will not make the code faster because this is a linear algorithm, and algorithms linear in the input are never faster when parallelized because the communication has the same order of growth as the algorithm itself:
-
-%%% META:FILE:opencl_example1.py
-\begin{lstlisting}[caption={in file: {\ft opencl\_example1.py}}]
-import numpy as npy
-from device import Device
-
-n = 100000
-u = npy.random.rand(n).astype(npy.float32)
-v = npy.random.rand(n).astype(npy.float32)
-
-device = Device()
-u_buffer = device.buffer(source=u)
-v_buffer = device.buffer(source=v)
-w_buffer = device.buffer(size=v.nbytes)
-
-kernels = device.compile(
-    """
-    __kernel void sum(__global const float * u,
-                      __global const float * v,
-                      __global float * w) {
-      int i = get_global_id(0);
-      w[i] = u[i] + v[i];
-    }
-    """
-)
-
-kernels.sum(device.queue, [n], None, u_buffer, v_buffer, w_buffer)
-w = device.retrieve(w_buffer)
-
-assert npy.linalg.norm(w - (u + v)) == 0
-\end{lstlisting}
-
-This program performs the following steps in addition to the original non-OpenCL code:
-it declares a {\ft device} object; it declares a buffer for each of the vectors $u$, $v$, and $w$; it declares and compiles the kernel; it runs the kernel; it retrieves the result.
-
-The {\ft device} object encapsulate the kernel(s) and a queue for kernel submission.
-
-The line:
-\begin{lstlisting}
-kernels.sum(..., [n], ...)
-\end{lstlisting}
-
-submits to the queue {\ft n} instances of the {\ft sum} kernel. Each kernel instance can retrieve its own ID using the function {\ft get\_global\_id(0)}. Notice that a kernel must be declared with the {\ft \_\_kernel} prefix. Arguments that are to be shared by all kernels must be {\ft \_\_global}.
-
-\subsection{Laplace solver}
-
-In this section we implement a two-dimensional Laplace solver. A three-dimensional generalization is straightforward. In particular, we want to solve the following differential equation known as a Laplace equation:
-
-\begin{equation}
-(\partial_x^2 + \partial_y^2) u(x, y) = q(x, y)
-\label{nabla}
-\end{equation}
-Here $q$ is the input and $u$ is the output.
-
-This equation originates, for example, in electrodynamics. In this case, $q$ is the distribution of electric charge in space and $u$ is the electrostatic potential.
-
-As we did in chapter 3, we proceed by discretizing the derivatives:
-
-\begin{eqnarray}
-\partial_x^2 u(x, y) &=& (u(x-h, y)-2 u(x, y)+u(x+h, y))/h^2 \\
-\partial_y^2 u(x, y) &=& (u(x, y-h)-2 u(x, y)+u(x, y+h))/h^2
-\end{eqnarray}
-Substitute them into eq.~\ref{nabla} and solve the equation in $u(x, y)$. We obtain
-\begin{equation}
-u(x, y) = 1/4 (u(x-h, y)+u(x+h, y)+u(x, y-h)+u(x, y+h)-h^2 q(x, y))
-\label{nabla2}
-\end{equation}
-
-We can therefore solve eq.~\ref{nabla} by iterating eq.~\ref{nabla2} until convergence. The initial value of $u$ will not affect the solution, but the closer we can pick it to the actual solution, the faster the convergence.
-
-The procedure we utilized here for transforming a differential equation into an iterative procedure is a general one and applies to other differential equations as well. The iteration proceeds very much as the fixed point solver also examined in chapter 3.
-
-Here is an implementation using {\ft ocl}:
-
-%%% META:FILE:opencl_laplace.py
-\begin{lstlisting}[caption={in file: {\ft opencl\_laplace.py}}]
-from random import randint, choice
-import numpy
-from canvas import Canvas
-from device import Device
-
-n = 300
-q = numpy.zeros((n, n), dtype=numpy.float32)
-u = numpy.zeros((n, n), dtype=numpy.float32)
-w = numpy.zeros((n, n), dtype=numpy.float32)
-
-for k in range(n):
-    q[randint(1, n - 1), randint(1, n - 1)] = choice((-1, +1))
-
-device = Device()
-q_buffer = device.buffer(source=q, mode=device.flags.READ_ONLY)
-u_buffer = device.buffer(source=u)
-w_buffer = device.buffer(source=w)
-
-
-kernels = device.compile(
-    """
-       __kernel void solve(__global float * w, 
-                           __global const float * u, 
-                           __global const float * q) {
-          int x = get_global_id(0);
-          int y = get_global_id(1);
-          int xy = y * WIDTH + x, up, down, left, right;
-          if(y!=0 && y!=WIDTH-1 && x!=0 && x!=WIDTH-1) {
-             up=xy+WIDTH; down=xy-WIDTH; left=xy-1; right=xy+1;
-             w[xy] = 1.0/4.0 * (u[up]+u[down]+u[left]+u[right] - q[xy]);
-          }
-       }
-    """.replace(
-        "WIDTH", str(n)
-    )
-)
-
-for k in range(1000):
-    kernels.solve(device.queue, [n, n], None, w_buffer, u_buffer, q_buffer)
-    (u_buffer, w_buffer) = (w_buffer, u_buffer)
-
-u = device.retrieve(u_buffer, shape=(n, n))
-
-Canvas().imshow(u).save(filename="plot.png")
-\end{lstlisting}
-
-\begin{figure}[ht]
-\begin{center}
-\centering\includegraphics[width=4in]{images/plot.png}
-\end{center}
-\caption{The image shows the output of the Laplace program and represents the two-dimensional electrostatic potential for a random charge distribution.\label{fig_u}}
-\end{figure}
 
 \chapter{Appendices}
 
@@ -13745,10 +13034,7 @@ $x^n\log x, n>0$ & $x^{n-1}(n\log x+1)$ \\ \hline
 
 \begin{thebibliography}{999}
 \bibitem{python} \url{http://www.python.org}
-\bibitem{numpy} Travis Oliphant, ``A Guide to NumPy''. Vol.1. USA: Trelgol Publishing (2006)
-\bibitem{scipy} \url{http://www.scipy.org/}
 \bibitem{pyopencl} Andreas Klöckner {\it et al} ``Pycuda and pyopencl: A scripting-based approach to gpu run-time code generation.'' Parallel Computing 38.3 (2012) pp 157-174
-\bibitem{ocl} \url{https://github.com/mdipierro/ocl}
 \bibitem{guido} \url{http://www.network-theory.co.uk/docs/pytut/}
 \bibitem{lutz} \url{http://oreilly.com/catalog/9780596158071}
 \bibitem{pydocs} \url{http://www.python.org/doc/}
@@ -13809,7 +13095,6 @@ $x^n\log x, n>0$ & $x^{n-1}(n\log x+1)$ \\ \hline
 \bibitem{folding} Sorin Istrail and Fumei Lam, ``Combinatorial Algorithms for Protein Folding in Lattice Models: A Survey of Mathematical Results'' (2009)
 \bibitem{flynn} Michael Flynn, ``Some Computer Organizations and Their Effectiveness''. IEEE Trans. Comput. C–21 (9) (1972) pp 948–960. DOI:10.1109/TC.1972.5009071
 \bibitem{admhal} Gene Amdahl, ``Validity of the Single Processor Approach to Achieving Large-Scale Computing Capabilities'', AFIPS Conference Proceedings (30) (1967) pp 483–485
-\bibitem{mpi4py} \url{http://mpi4py.scipy.org/}
 \bibitem{mapreduce} Jeffrey Dean and Sanjay Ghemawat. 2008. MapReduce: simplified data processing on large clusters. Commun. ACM 51, 1 (January 2008), 107-113. DOI=10.1145/1327452.1327492 http://doi.acm.org/10.1145/1327452.1327492
 \bibitem{mincemeat} \url{https://github.com/ziyuang/mincemeatpy}
 \bibitem{cuda} Erik Lindholm {\it et al.}, ``NVIDIA Tesla: A unified graphics and computing architecture.'' Micro, IEEE 28.2 (2008) pp 39-55.

@@ -1,0 +1,31 @@
+[project]
+name    = "book-numerical"
+version = "0.1.0"
+
+[nixpkgs]
+ref = "nixos-24.11"
+
+[targets.pdf]
+kind         = "custom"
+deps.nixpkgs = ["texliveFull"]
+build_script = """
+export HOME=$TMPDIR
+export TEXMFVAR=$TMPDIR/texmf-var
+export TEXMFCONFIG=$TMPDIR/texmf-config
+export TEXMFHOME=$TMPDIR/texmf-home
+
+# Multi-pass: undefined cites/refs resolve only after .aux is written, so
+# the first pass is expected to emit errors. Tolerate non-zero exits and
+# rely on the final-pass PDF check to decide success.
+set +e
+pdflatex -interaction=nonstopmode book_numerical.tex
+makeindex book_numerical.idx
+pdflatex -interaction=nonstopmode book_numerical.tex
+pdflatex -interaction=nonstopmode book_numerical.tex
+set -e
+test -s book_numerical.pdf
+"""
+install_script = """
+mkdir -p $out
+cp book_numerical.pdf $out/
+"""
