@@ -4840,10 +4840,13 @@ stops or enters into an infinite loop.
 Consider the following code:
 
 \begin{lstlisting}
-def next(i):
-    while len(set(str(i * i))) > 2:
-        i=i+2
-    print(i)
+import std/sets
+
+proc next(i: int) =
+  var i = i
+  while toHashSet($($(i * i))).card > 2:
+    i += 2
+  echo i
 
 next(81621)
 \end{lstlisting}
@@ -8966,16 +8969,28 @@ Here we define a class that can access this entropy source and use it to generat
 
 \index{class!URANDOM}
 
-%%% META:FILE:test.py
 \begin{lstlisting}
-class URANDOM(object):
-    def __init__(self, data=None):
-        if data: open("/dev/urandom", "wb").write(str(data))
-    def random(self):
-        n = 16
-        random_bytes =  os.urandom(n)
-        random_integer = sum(ord(random_bytes[k]) * 256 ** k for k in range(n))
-        random_float = float(random_integer)/256 ** n
+import std/[os, streams]
+
+type URANDOM* = ref object
+
+proc newURANDOM*(data = ""): URANDOM =
+  result = URANDOM()
+  if data.len > 0:
+    let s = newFileStream("/dev/urandom", fmWrite)
+    if not s.isNil:
+      s.write(data); s.close()
+
+proc random*(u: URANDOM): float =
+  const n = 16
+  var bytes = newString(n)
+  let s = newFileStream("/dev/urandom", fmRead)
+  doAssert s.readData(addr bytes[0], n) == n
+  s.close()
+  var randomInteger = 0'u64
+  for k in 0 ..< n:
+    randomInteger += uint64(byte(bytes[k])) * (256'u64 ^ k)
+  result = float(randomInteger) / (256.0 ^ n)
 \end{lstlisting}
 
 Notice how the constructor allows us to further randomize the data by contributing input to the entropy source. Also notice how the {\ft random()} method reads 16 bytes from the stream (using {\ft os.urandom()}), converts each into $8$-bit integers, combines them into a $128$-bit integer, and then converts it to a float by dividing by $256^{16}$.
@@ -9014,24 +9029,27 @@ The RANDU generator is particularly fast because the modulus can
 be implemented using the finite 32-bit precision.
 
 Here is a possible implementation for $c=0$:
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-class MCG(object):
-    def __init__(self, seed, a=66539, m=2 ** 31):
-        self.x = seed
-        self.a, self.m = a, m
-    def next(self):
-        self.x = (self.a * self.x) % self.m
-        return self.x
-    def random(self):
-        return float(self.next())/self.m
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+type
+  MCG* = ref object
+    x*, a*, m*: int
+
+proc newMCG*(seed: int, a = 66539, m = 1 shl 31): MCG =
+  MCG(x: seed, a: a, m: m)
+
+proc next*(g: MCG): int =
+  g.x = (g.a * g.x) mod g.m
+  g.x
+
+proc random*(g: MCG): float =
+  float(g.next()) / float(g.m)
 \end{lstlisting}
 
 which we can test with
 \begin{lstlisting}
->>> randu = MCG(seed=1071914055)
->>> for i in range(10): print(randu.random())
-...
+let randu = newMCG(seed = 1071914055)
+for i in 0 ..< 10: echo randu.random()
 \end{lstlisting}
 
 The output numbers ``look'' random but are not truly random. Running the same code with the same seed generates the same output. Notice the following:
@@ -9249,44 +9267,47 @@ pure Python implementation of the Marsenne twister:
 
 \index{class!MarsenneTwister}
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-class MarsenneTwister(object):
-    """
-    based on:
-    Knuth 1981, The Art of Computer Programming
-    Vol. 2 (2nd Ed.), pp102]
-    """
-    def __init__(self, seed=4357):
-        self.w = []    # the array for the state vector
-        self.w.append(seed & 0xffffffff)
-        for i in range(1, 625):
-            self.w.append((69069 * self.w[i-1]) & 0xffffffff)
-        self.wi = i
-    def random(self):
-        w = self.w
-        wi = self.wi
-        N, M, U, L = 624, 397, 0x80000000, 0x7fffffff
-        K = [0x0, 0x9908b0df]
-        y = 0
-        if wi >= N:
-            for kk in range((N-M) + 1):
-                y = (w[kk]&U)|(w[kk+1]&L)
-                w[kk] = w[kk+M] ^ (y >> 1) ^ K[y & 0x1]
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+type
+  MarsenneTwister* = ref object
+    w*: array[625, uint32]
+    wi*: int
 
-            for kk in range(kk, N):
-                y = (w[kk]&U)|(w[kk+1]&L)
-                w[kk] = w[kk+(M-N)] ^ (y >> 1) ^ K[y & 0x1]
-            y = (w[N-1]&U)|(w[0]&L)
-            w[N-1] = w[M-1] ^ (y >> 1) ^ K[y & 0x1]
-        wi = 0
-        y = w[wi]
-        wi += 1
-        y ^= (y >> 11)
-        y ^= (y << 7) & 0x9d2c5680
-        y ^= (y << 15) & 0xefc60000
-        y ^= (y >> 18)
-        return (float(y)/0xffffffff )
+proc newMarsenneTwister*(seed: uint32 = 4357'u32): MarsenneTwister =
+  result = MarsenneTwister()
+  result.w[0] = seed
+  for i in 1 ..< 625:
+    result.w[i] = 69069'u32 * result.w[i-1]
+  result.wi = 624
+
+proc random*(g: MarsenneTwister): float =
+  const
+    N = 624
+    M = 397
+    U = 0x80000000'u32
+    L = 0x7fffffff'u32
+  let K = [0'u32, 0x9908b0df'u32]
+  var y: uint32 = 0
+  if g.wi >= N:
+    var kk = 0
+    while kk < N - M:
+      y = (g.w[kk] and U) or (g.w[kk + 1] and L)
+      g.w[kk] = g.w[kk + M] xor (y shr 1) xor K[y and 1'u32]
+      inc kk
+    while kk < N - 1:
+      y = (g.w[kk] and U) or (g.w[kk + 1] and L)
+      g.w[kk] = g.w[kk + (M - N)] xor (y shr 1) xor K[y and 1'u32]
+      inc kk
+    y = (g.w[N - 1] and U) or (g.w[0] and L)
+    g.w[N - 1] = g.w[M - 1] xor (y shr 1) xor K[y and 1'u32]
+    g.wi = 0
+  y = g.w[g.wi]; inc g.wi
+  y = y xor (y shr 11)
+  y = y xor ((y shl 7) and 0x9d2c5680'u32)
+  y = y xor ((y shl 15) and 0xefc60000'u32)
+  y = y xor (y shr 18)
+  result = float(y) / float(0xffffffff'u32)
 \end{lstlisting}
 
 In the above code, numbers starting with \verb!0x! are represented in hexadecimal notation. The symbols \verb!&!, \verb!^!, \verb!<<!, and \verb!>>! are bitwise operators. \verb!&! is a binary AND,  \verb!^! is a binary exclusive XOR,  \verb!<<! shifts all bits to the left and  \verb!>>! shifts all bits to the right. We refer to the Python official documentation for details.
@@ -9376,20 +9397,21 @@ generators.
 
 Here is an example of a usage of {\ft leapfrog}:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def leapfrog(mcg, k):
-    a = mcg.a ** k % mcg.m
-    return [MCG(mcg.next(), a, mcg.m) for i in range(k)]
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc leapfrog*(mcg: MCG, k: int): seq[MCG] =
+  let a = (mcg.a ^ k) mod mcg.m
+  for i in 0 ..< k:
+    result.add newMCG(mcg.next(), a, mcg.m)
 \end{lstlisting}
 
 Here is an example of usage:
 \begin{lstlisting}
->>> generators=leapfrog(MCG(m), 3)
->>> for k in range(3):
-...     for i in range(5):
-...        x=generators[k].random()
-...        print(k, "\t", i, "\t", x)
+let generators = leapfrog(newMCG(m), 3)
+for k in 0 ..< 3:
+  for i in 0 ..< 5:
+    let x = generators[k].random()
+    echo k, "\t", i, "\t", x
 \end{lstlisting}
 
 The Marsenne twister algorithm implemented in {\ft os.random} has leapfrogging built in. In fact, the module includes a {\ft random.jumpahead(n)} method that allows us to efficiently skip $n$ numbers.
@@ -9439,25 +9461,30 @@ Here we consider the discrete case as we implement it into a {\ft randint} metho
 
 \index{class!RandomSource}
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-class RandomSource(object):
-    def __init__(self, generator=None):
-        self.generator = generator or random 
-    def random(self):
-        return self.generator.random()
-    def randint(self, a, b):
-        return int(a+(b-a+1) * self.random())
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+type
+  RandomSource* = ref object
+    generator*: proc(): float    # any uniform `[0, 1)` source
+
+proc newRandomSource*(generator: proc(): float = nil): RandomSource =
+  let g = if generator.isNil: (proc(): float = rand(1.0)) else: generator
+  RandomSource(generator: g)
+
+proc random*(r: RandomSource): float = r.generator()
+
+proc randint*(r: RandomSource, a, b: int): int =
+  a + int(float(b - a + 1) * r.random())
 \end{lstlisting}
 
 Notice that the random {\ft RandomSource} constructor expects a generator such as {\ft MCG}, {\ft MarsenneTwister}, or simply {\ft random} (default value). The {\ft random()} method is a proxy method for the equivalent method of the underlying generator object.
 
 We can use {\ft randint} to generate a random choice from a finite set when each option has the same probability:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-    def choice(self, S):
-        return S[self.randint(0, len(S)-1)]
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc choice*[T](r: RandomSource, S: openArray[T]): T =
+  S[r.randint(0, S.len - 1)]
 \end{lstlisting}
 
 \goodbreak\subsection{Bernoulli distribution}
@@ -9479,26 +9506,25 @@ A Bernoulli random variable has an expected value of $p$ and variance of $pq$.
 
 We implement it by adding a corresponding method to the {\ft RandomSource} class:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-    def bernoulli(self, p):
-        return 1 if self.random()<p else 0
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc bernoulli*(r: RandomSource, p: float): int =
+  if r.random() < p: 1 else: 0
 \end{lstlisting}
 
 \goodbreak\subsection{Biased dice and table lookup}
 
 A generalization of the Bernoulli distribution is a distribution in which we have a finite set of choices, each with an associated probability. The table can be a list of tuples {\ft (value, probability)} or a dictionary of {\ft value:probability}:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-    def lookup(self, table, epsilon=1e-6):
-        if isinstance(table, dict): table = table.items()
-        u = self.random()
-        for key, p in table:
-            if u<p+epsilon:
-                return key
-            u = u - p
-        raise ArithmeticError("invalid probability")
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc lookup*[K](r: RandomSource, table: seq[(K, float)],
+                epsilon = 1e-6): K =
+  var u = r.random()
+  for (key, p) in table:
+    if u < p + epsilon: return key
+    u = u - p
+  raise newException(ArithmeticDefect, "invalid probability")
 \end{lstlisting}
 
 Let"s say we want a random number generator that can only produce the
@@ -9511,17 +9537,18 @@ outcome 0, 1 or 2 with known probabilities:
 Because the probability of the possible outcomes are rational numbers
 (fractions), we can proceed as follows:
 \begin{lstlisting}
->>> def test_lookup(nevents=100, table=[(0, 0.50), (1, 0.23), (2, 0.27)]):
-...     g = RandomSource()
-...     f=[0, 0, 0]
-...     for k in range(nevents):
-...         p=g.lookup(table)
-...         print(p, end='')
-...         f[p]=f[p]+1
-...     print
-...     for i in range(len(table)):
-...         f[i]=float(f[i])/nevents
-...         printprint("frequency[%i]=%f" % (i, f[i]))
+proc testLookup(nevents = 100,
+                table = @[(0, 0.50), (1, 0.23), (2, 0.27)]) =
+  let g = newRandomSource()
+  var f = newSeq[int](table.len)
+  for _ in 0 ..< nevents:
+    let p = g.lookup(table)
+    write(stdout, $p, " ")
+    f[p] += 1
+  echo ""
+  for i in 0 ..< table.len:
+    let freq = f[i] / nevents
+    echo "frequency[", i, "]=", freq
 \end{lstlisting}
 
 which produces the following output:
@@ -9622,40 +9649,48 @@ integer:
 \index{class!FishmanYarberry}
 
 \begin{lstlisting}
-class FishmanYarberry(object):
-    def __init__(self, table=[[0, 0.2], [1, 0.5], [2, 0.3]]):
-        t=log(len(table), 2)
-        while t!=int(t):
-            table.append([0, 0.0])
-            t=log(len(table), 2)
-        t=int(t)
-        a=[]
-        for i in range(t):
-            a.append([])
-            if i == 0:
-                for j in range(2 ** t):
-                    a[i].append(table[j, 1])
-            else:
-                for j in range(2 ** (t-i)):
-                    a[i].append(a[i-1][2 * j]+a[i-1][2 * j+1])
-        self.table=table
-        self.t=t
-        self.a=a
+type
+  FishmanYarberry*[K] = ref object
+    table*: seq[(K, float)]
+    t*: int
+    a*: seq[seq[float]]
 
-    def discrete_map(self, u):
-        i=int(self.t)-1
-        j=0
-        b=0
-        while i>0:
-            if u>b+self.a[i][j]:
-                b=b+self.a[i][j]
-                j=2 * j+2
-            else:
-                j=2 * j
-            i=i-1
-        if u>b+self.a[i][j]:
-            j=j+1
-        return self.table[j][0]
+proc newFishmanYarberry*[K](table0: seq[(K, float)]):
+                            FishmanYarberry[K] =
+  ## Pad table to a power-of-two length and precompute the F-Y tree.
+  var table = table0
+  var n = table.len
+  while (n and (n - 1)) != 0:        # not a power of two
+    table.add (default(K), 0.0)
+    n = table.len
+  let t = fastLog2(n)
+  var a: seq[seq[float]] = @[]
+  for i in 0 ..< t:
+    var row: seq[float] = @[]
+    if i == 0:
+      for j in 0 ..< n: row.add table[j][1]
+    else:
+      let prev = a[i - 1]
+      for j in 0 ..< (n shr i):
+        row.add prev[2 * j] + prev[2 * j + 1]
+    a.add row
+  FishmanYarberry[K](table: table, t: t, a: a)
+
+proc discreteMap*[K](fy: FishmanYarberry[K], u: float): K =
+  var i = fy.t - 1
+  var j = 0
+  var b = 0.0
+  var u = u
+  while i > 0:
+    if u > b + fy.a[i][j]:
+      b += fy.a[i][j]
+      j = 2 * j + 2
+    else:
+      j = 2 * j
+    dec i
+  if u > b + fy.a[i][j]:
+    j += 1
+  fy.table[j][0]
 \end{lstlisting}
 
 
@@ -9712,17 +9747,17 @@ table lookup algorithm, one may just notice that the current recursive relation 
 
 This allows for a very efficient implementation:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-    def binomial(self, n, p, epsilon=1e-6):
-        u = self.random()
-        q = (1.0-p) ** n
-        for k in range(n+1):
-            if u<q+epsilon:
-                return k
-            u = u - q
-            q = q * (n-k)/(k+1) * p/(1.0-p)
-        raise ArithmeticError("invalid probability")
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc binomial*(r: RandomSource, n: int, p: float,
+               epsilon = 1e-6): int =
+  var u = r.random()
+  var q = pow(1.0 - p, float(n))
+  for k in 0 .. n:
+    if u < q + epsilon: return k
+    u = u - q
+    q = q * float(n - k) / float(k + 1) * p / (1.0 - p)
+  raise newException(ArithmeticDefect, "invalid probability")
 \end{lstlisting}
 
 
@@ -9783,19 +9818,18 @@ negative binomial distribution:
 
 This allows for a very efficient implementation:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-    def negative_binomial(self, k, p, epsilon=1e-6):        
-        u = self.random()
-        n = k 
-        q = p ** k
-        while True:
-            if u<q+epsilon:
-                return n
-            u = u - q
-            q = q * n/(n-k+1) * (1-p)
-            n = n + 1
-        raise ArithmeticError("invalid probability")
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc negativeBinomial*(r: RandomSource, k: int, p: float,
+                       epsilon = 1e-6): int =
+  var u = r.random()
+  var n = k
+  var q = pow(p, float(k))
+  while true:
+    if u < q + epsilon: return n
+    u = u - q
+    q = q * float(n) / float(n - k + 1) * (1.0 - p)
+    n += 1
 \end{lstlisting}
 
 Notice once again that, unlike the binomial case, here $k$ is fixed, not $n$, and the random variable has a minimum value of $k$ but no upper bound.
@@ -9880,19 +9914,17 @@ binomial distribution and observe that for Poisson,
 \end{eqnarray}
 therefore the preceding algorithm can be modified into
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-    def poisson(self, lamb, epsilon=1e-6):
-        u = self.random()
-        q = exp(-lamb)
-        k=0
-        while True:
-            if u<q+epsilon:
-                return k
-            u = u - q
-            q = q * lamb/(k+1)
-            k = k+1
-        raise ArithmeticError("invalid probability")
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc poisson*(r: RandomSource, lamb: float, epsilon = 1e-6): int =
+  var u = r.random()
+  var q = exp(-lamb)
+  var k = 0
+  while true:
+    if u < q + epsilon: return k
+    u = u - q
+    q = q * lamb / float(k + 1)
+    k += 1
 \end{lstlisting}
 
 Note how this algorithm may take an arbitrary amount of time to generate a
@@ -9913,10 +9945,10 @@ into integers by using the formula
 h_i=a+\left\lfloor (b-a+1)y_i\right\rfloor
 \end{equation}
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-    def uniform(self, a, b):
-        return a+(b-a) * self.random()
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc uniform*(r: RandomSource, a, b: float): float =
+  a + (b - a) * r.random()
 \end{lstlisting}
 
 \goodbreak\subsection{Exponential distribution}
@@ -9987,16 +10019,17 @@ x=-\frac 1\lambda \log u
 
 We implement as follows:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-    def exponential(self, lamb):
-        return -log(self.random())/lamb
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc exponential*(r: RandomSource, lamb: float): float =
+  -ln(r.random()) / lamb
 \end{lstlisting}
 
 This is an important distribution, and Python has a function for it:
 
 \begin{lstlisting}
-random.expovariate(lamb)
+# In Nim's std/random there is no built-in exponential, but it is
+# trivially expressed as -ln(rand(1.0)) / lamb (above).
 \end{lstlisting}
 
 \goodbreak\subsection{Normal/Gaussian distribution}
@@ -10034,20 +10067,33 @@ There is no way to map a uniform random number into a Gaussian number but there 
 \item  $y_1=v_1\sqrt{(-2/s)\log s}$ and $y_2=v_2\sqrt{(-2/s)\log s}$
 \end{itemize}
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-    def gauss(self, mu=0.0, sigma=1.0):
-        if hasattr(self, "other") and self.other:
-            this, other = self.other, None
-        else:
-            while True:
-                v1 = self.random(-1, 1)
-                v2 = self.random(-1, 1)
-                r = v1 * v1+v2 * v2
-                if r<1: break
-            this = sqrt(-2.0 * log(r)/r) * v1
-            self.other = sqrt(-2.0 * log(r)/r) * v1
-        return mu+sigma * this
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+type
+  GaussRandomSource* = ref object
+    base*: RandomSource
+    other*: Option[float]   # cached second value from Marsaglia pair
+
+proc newGaussRandomSource*(base: RandomSource): GaussRandomSource =
+  GaussRandomSource(base: base, other: none(float))
+
+proc gauss*(g: GaussRandomSource, mu = 0.0, sigma = 1.0): float =
+  ## Marsaglia polar method: produces two Gaussians per call;
+  ## one is cached for the next invocation.
+  var thisVal: float
+  if g.other.isSome:
+    thisVal = g.other.get()
+    g.other = none(float)
+  else:
+    var v1, v2, r: float
+    while true:
+      v1 = g.base.uniform(-1.0, 1.0)
+      v2 = g.base.uniform(-1.0, 1.0)
+      r = v1 * v1 + v2 * v2
+      if r < 1: break
+    thisVal = sqrt(-2.0 * ln(r) / r) * v1
+    g.other = some(sqrt(-2.0 * ln(r) / r) * v2)
+  mu + sigma * thisVal
 \end{lstlisting}
 
 Note how the first time the method next is called, it generates two Gaussian
@@ -10066,7 +10112,9 @@ We used this relation in the last line of the code.
 This is also an important distribution, and Python has a function for it:
 
 \begin{lstlisting}
-random.gauss(mu, sigma)
+import std/random
+# std/random does provide gauss(mu, sigma) directly (since Nim 1.4)
+echo gauss(mu, sigma)
 \end{lstlisting}
 
 Given a Gaussian random variable with mean $\mu$ and standard deviation $\sigma$, it is often useful to know how many standard deviations $a$ correspond to a confidence $c$ defined as
@@ -10079,24 +10127,26 @@ The following algorithm generates a table of $a$ versus $c$ given $\mu$ and $\si
 
 \index{confidence intervals}
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def confidence_intervals(mu, sigma):
-    """Computes the normal confidence intervals"""
-    CONFIDENCE=[
-        (0.68, 1.0), 
-        (0.80, 1.281551565545), 
-        (0.90, 1.644853626951), 
-        (0.95, 1.959963984540), 
-        (0.98, 2.326347874041), 
-        (0.99, 2.575829303549), 
-        (0.995, 2.807033768344), 
-        (0.998, 3.090232306168), 
-        (0.999, 3.290526731492), 
-        (0.9999, 3.890591886413), 
-        (0.99999, 4.417173413469)
-        ]
-    return [(a, mu-b * sigma, mu+b * sigma) for (a, b) in CONFIDENCE]
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+const CONFIDENCE* = [
+  (0.68,    1.0),
+  (0.80,    1.281551565545),
+  (0.90,    1.644853626951),
+  (0.95,    1.959963984540),
+  (0.98,    2.326347874041),
+  (0.99,    2.575829303549),
+  (0.995,   2.807033768344),
+  (0.998,   3.090232306168),
+  (0.999,   3.290526731492),
+  (0.9999,  3.890591886413),
+  (0.99999, 4.417173413469)
+]
+
+proc confidenceIntervals*(mu, sigma: float): seq[(float, float, float)] =
+  ## Returns (confidence, lower bound, upper bound) for a Gaussian.
+  for (a, b) in CONFIDENCE:
+    result.add (a, mu - b * sigma, mu + b * sigma)
 \end{lstlisting}
 
 
@@ -10116,17 +10166,17 @@ F(x) \equiv  \textrm{Prob}(X<x) = 1 - \left(\frac{x_m}{x}\right)^{\alpha}
 
 It can be implemented as follows using the inversion method:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-    def pareto(self, alpha, xm):
-        u = self.random()
-        return xm * (1.0-u) ** (-1.0/alpha)
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc pareto*(r: RandomSource, alpha, xm: float): float =
+  let u = r.random()
+  xm * pow(1.0 - u, -1.0 / alpha)
 \end{lstlisting}
 
 The Python function to generate Pareto distributed random numbers is
 
 \begin{lstlisting}
-xm * random.paretovariate(alpha)
+# Equivalent in Nim: xm * pow(1.0 - rand(1.0), -1.0/alpha)
 \end{lstlisting}
 
 The Pareto distribution is an example of Levy distribution. The Central Limit theorem does not apply to it.
@@ -10140,23 +10190,23 @@ x &=&\cos (2\pi u) \\
 y &=&\sin (2\pi u)
 \end{eqnarray}
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-    def point_on_circle(self, radius=1.0):
-        angle = 2.0 * pi * self.random()
-        return radius * math.cos(angle), radius * math.sin(angle)
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc pointOnCircle*(r: RandomSource, radius = 1.0): (float, float) =
+  let angle = 2.0 * PI * r.random()
+  (radius * cos(angle), radius * sin(angle))
 \end{lstlisting}
 
 We can generate a random point uniformly distributed inside a circle by generating, independently, the $x$ and $y$ coordinates of points inside a square and rejecting those outside the circle:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-    def point_in_circle(self, radius=1.0):
-        while True:
-            x = self.uniform(-radius, radius)
-            y = self.uniform(-radius, radius)
-            if x * x+y * y < radius * radius:
-                return x, y
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc pointInCircle*(r: RandomSource, radius = 1.0): (float, float) =
+  while true:
+    let x = r.uniform(-radius, radius)
+    let y = r.uniform(-radius, radius)
+    if x * x + y * y < radius * radius:
+      return (x, y)
 \end{lstlisting}
 
 \goodbreak\subsection{In and on a sphere}
@@ -10172,20 +10222,22 @@ z &=&v_3/\sqrt{v_1^2+v_2^2+v_3^2}
 \end{eqnarray}
 else start again.
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-    def point_in_sphere(self, radius=1.0):
-        while True:
-            x = self.uniform(-radius, radius)
-            y = self.uniform(-radius, radius)
-            z = self.uniform(-radius, radius)
-            if x * x+y * y * z * z < radius * radius:
-                return x, y, z
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc pointInSphere*(r: RandomSource, radius = 1.0):
+                   (float, float, float) =
+  while true:
+    let x = r.uniform(-radius, radius)
+    let y = r.uniform(-radius, radius)
+    let z = r.uniform(-radius, radius)
+    if x * x + y * y + z * z < radius * radius:
+      return (x, y, z)
 
-    def point_on_sphere(self, radius=1.0):
-        x, y, z = self.point_in_sphere(radius)
-        norm = math.sqrt(x * x+y * y+z * z)
-        return x/norm, y/norm, z/norm
+proc pointOnSphere*(r: RandomSource, radius = 1.0):
+                   (float, float, float) =
+  let (x, y, z) = r.pointInSphere(radius)
+  let nrm = sqrt(x * x + y * y + z * z)
+  (x / nrm, y / nrm, z / nrm)
 \end{lstlisting}
 
 \section{Resampling}
@@ -10197,16 +10249,19 @@ We now introduce a different methodology, which we will need later when talking 
 If we have a population $S$ of equally distributed events and we need to generate an event from the same distribution as the population, we can simply draw a random element from the population. In Python, this is done with
 
 \begin{lstlisting}
->>> S = [1, 2, 3, 4, 5, 6]
->>> random.choice(S)
+import std/random
+randomize()
+let S = @[1, 2, 3, 4, 5, 6]
+echo sample(S)
 \end{lstlisting}
 
 We can therefore generate a sample of random events by repeating this procedure. This is called {\it resampling}~\cite{resampling}:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def resample(S, size=None):
-    return [random.choice(S) for i in range(size or len(S))]
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc resample*[T](S: openArray[T], size = -1): seq[T] =
+  let n = if size < 0: S.len else: size
+  for _ in 0 ..< n: result.add sample(S)
 \end{lstlisting}
 
 \goodbreak\section{Binning}
@@ -10219,28 +10274,27 @@ distribution of the random numbers.
 
 Let"s consider the following program:
 \begin{lstlisting}
-def bin(generator, nevents, a, b, nbins):
-     # create empty bins
-    bins=[]
-    for k in range(nbins):
-        bins.append(0)
-     # fill the bins
-    for i in range(nevents):
-        x=generator.uniform()
-        if x>=a and x<=b:
-            k=int((x-a)/(b-a) * nbins)
-            bins[k]=bins[k]+1
-     # normalize bins
-    for i in range(nbins):
-        bins[i]=float(bins[i])/nevents
-    return bins
+import std/times
 
-def test_bin(nevents=1000, nbins=10):
-    bins=bin(MCG(time()), nevents, 0, 1, nbins)
-    for i in range(len(bins)):
-        print(i, bins[i])
+proc bin(generator: RandomSource, nevents: int,
+         a, b: float, nbins: int): seq[float] =
+  result = newSeq[float](nbins)
+  for _ in 0 ..< nevents:
+    let x = generator.random()
+    if x >= a and x <= b:
+      let k = int((x - a) / (b - a) * float(nbins))
+      result[k] += 1.0
+  for i in 0 ..< nbins:
+    result[i] /= float(nevents)
 
->>> test_bin()
+proc testBin(nevents = 1000, nbins = 10) =
+  let g = newRandomSource(
+    proc(): float = newMCG(int(epochTime())).random())
+  let bins = bin(g, nevents, 0.0, 1.0, nbins)
+  for i, b in bins:
+    echo i, " ", b
+
+testBin()
 \end{lstlisting}
 
 It produces the following output:
@@ -10337,13 +10391,13 @@ and one can approximate $\pi $ to arbitrary precision by computing the sum
 
 We can use the program
 \begin{lstlisting}
-def pi_Taylor(n):
-    pi=0
-    for i in range(n):
-        pi=pi+4.0/(2 * i+1) * (-1) ** i
-        print(i, pi)
+proc piTaylor(n: int) =
+  var pi = 0.0
+  for i in 0 ..< n:
+    pi = pi + 4.0 / float(2 * i + 1) * pow(-1.0, float(i))
+    echo i, " ", pi
 
->>> pi_Taylor(1000)
+piTaylor(1000)
 \end{lstlisting}
 
 which produces the following output:
@@ -10368,16 +10422,23 @@ A better formula is due to Plauffe,
 which we can implement as follows:
 we can use the program
 \begin{lstlisting}
-from decimal import Decimal
+# Nim does not ship with arbitrary-precision decimals in the stdlib;
+# we use plain `float` here. For the high-precision form a `BigFloat`
+# package such as `bignum` would replace the `float` type below.
 
-def pi_Plauffe(n):
-    pi=Decimal(0)
-    a, b, c, d = Decimal(4), Decimal(2), Decimal(1), Decimal(1)/Decimal(16)
-    for i in range(n):
-        i8 = Decimal(8) * i
-        pi=pi+(d ** i) * (a/(i8+1)-b/(i8+4)-c/(i8+5)-c/(i8+6))
-    return pi
->>> pi_Plauffe(1000)
+proc piPlauffe(n: int): float =
+  var pi = 0.0
+  let a = 4.0
+  let b = 2.0
+  let c = 1.0
+  let d = 1.0 / 16.0
+  for i in 0 ..< n:
+    let i8 = float(8 * i)
+    pi += pow(d, float(i)) * (a/(i8+1.0) - b/(i8+4.0) -
+                              c/(i8+5.0) - c/(i8+6.0))
+  return pi
+
+echo piPlauffe(1000)
 \end{lstlisting}
 
 The preceding formula works and converges very fast and already in 100 iterations produces
@@ -10395,20 +10456,20 @@ the quarter of a circle ($\pi /4$) divided by the area of the square (1).
 
 Here is a program that implements this strategy:
 \begin{lstlisting}
-from random import * 
+import std/random
+randomize()
 
-def pi_mc(n):
-    pi=0
-    counter=0
-    for i in range(n):
-        x=random()
-        y=random()
-        if x ** 2 + y ** 2 < 1:
-            counter=counter+1
-        pi=4.0 * float(counter)/(i+1)
-        print(i, pi)
+proc piMc(n: int) =
+  var counter = 0
+  for i in 0 ..< n:
+    let x = rand(1.0)
+    let y = rand(1.0)
+    if x * x + y * y < 1.0:
+      inc counter
+    let pi = 4.0 * float(counter) / float(i + 1)
+    echo i, " ", pi
 
-pi_mc(1000)
+piMc(1000)
 \end{lstlisting}
 
 The output of the algorithm is shown in fig.~\ref{pi-plot}.
@@ -10458,37 +10519,37 @@ At the end of each day, we pay \$30 for each item remaining in stock.
 Here is a program that takes $N$ (the number of items in stock) and $d$ (the
 number of simulated days) and computes the average daily income:
 \begin{lstlisting}
-def simulate_once(N):
-    profit = 0
-    loss = 30 * N
-    instock = N
-    for j in range(int(gauss(976, 352))):
-        if instock>0:
-            if random()<0.05:
-                instock=instock-1
-                profit = profit + 100
-        else:
-            if random()<0.02:
-                profit = profit + 100
-    return profit-loss
+proc simulateOnce(N: int): float =
+  var profit = 0.0
+  let loss = 30.0 * float(N)
+  var instock = N
+  let visitors = int(gauss(976.0, 352.0))
+  for _ in 0 ..< visitors:
+    if instock > 0:
+      if rand(1.0) < 0.05:
+        instock -= 1
+        profit += 100.0
+    else:
+      if rand(1.0) < 0.02:
+        profit += 100.0
+  profit - loss
 
-def simulate_many(N, ap=1, rp=0.01, ns=1000):
-    s = 0.0
-    for k in range(1, ns):
-        x = simulate_once(N)
-        s += x
-        mu = s/k
-        if k>10 and mu-mu_old<max(ap, rp * mu):
-            return mu
-        else:
-            mu_old = mu
-    raise ArithmeticError("no convergence")
+proc simulateMany(N: int, ap = 1.0, rp = 0.01, ns = 1000): float =
+  var s = 0.0
+  var muOld = 0.0
+  for k in 1 ..< ns:
+    s += simulateOnce(N)
+    let mu = s / float(k)
+    if k > 10 and mu - muOld < max(ap, rp * mu):
+      return mu
+    muOld = mu
+  raise newException(ArithmeticDefect, "no convergence")
 \end{lstlisting}
 
 By looping over different $N$ (items in stock), we can compute the average daily income as a function of $N$:
 \begin{lstlisting}
->>> for N in range(0, 100, 10):
->>>     print(N, simulate_many(N, ap=100))
+for N in countup(0, 99, 10):
+  echo N, " ", simulateMany(N, ap = 100.0)
 \end{lstlisting}
 
 The program produces the following output:
@@ -10567,24 +10628,26 @@ The second step of the bootstrap methodology consists of sorting the $\mu_k$ and
 
 Here is the complete algorithm:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-def bootstrap(x, confidence=0.68, nsamples=100):
-    """Computes the bootstrap errors of the input list."""
-    def mean(S): return float(sum(x for x in S))/len(S)
-    means = [mean(resample(x)) for k in range(nsamples)]
-    means.sort()
-    left_tail = int(((1.0-confidence)/2) * nsamples)
-    right_tail = nsamples-1-left_tail
-    return means[left_tail], mean(x), means[right_tail]
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc bootstrap*(x: seq[float], confidence = 0.68, nsamples = 100):
+                (float, float, float) =
+  ## Bootstrap confidence interval. Returns (lower, mean, upper).
+  var means: seq[float] = @[]
+  for _ in 0 ..< nsamples: means.add mean(resample(x))
+  means.sort()
+  let leftTail = int(((1.0 - confidence) / 2.0) * float(nsamples))
+  let rightTail = nsamples - 1 - leftTail
+  (means[leftTail], mean(x), means[rightTail])
 \end{lstlisting}
 
 Here is an example of usage:
 
 \begin{lstlisting}
->>> S = [random.gauss(2, 1) for k in range(100)]
->>> bootstrap(S)
-(1.7767055865879007, 1.8968778392283303, 2.003420362236985)
+var S: seq[float] = @[]
+for _ in 0 ..< 100: S.add gauss(2.0, 1.0)
+echo bootstrap(S)
+# (1.7767055865879007, 1.8968778392283303, 2.003420362236985)
 \end{lstlisting}
 
 In this example, the output consists of $\mu^-$, $\mu$, and $\mu^+$.
@@ -10598,35 +10661,35 @@ We can now combine everything we have seen so far into a generic program that ca
 
 \index{class!MCEngine}
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-class MCEngine:
-    """
-    Monte Carlo Engine parent class.
-    Runs a simulation many times and computes average and error in average.
-    Must be extended to provide the simulate_once method
-    """
-    def simulate_once(self):
-        raise NotImplementedError
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+type
+  MCEngine* = ref object of RootObj
+    results*: seq[float]
+    convergence*: bool
 
-    def simulate_many(self, ap=0.1, rp=0.1, ns=1000):
-        self.results = []
-        s1=s2=0.0
-        self.convergence=False
-        for k in range(1, ns):
-            x = self.simulate_once()
-            self.results.append(x)
-            s1 += x
-            s2 += x * x
-            mu = float(s1)/k
-            variance = float(s2)/k-mu * mu
-            dmu = sqrt(variance/k)
-            if k>10:
-                if abs(dmu)<max(ap, abs(mu) * rp):
-                    self.converence = True
-                    break
-        self.results.sort()
-        return bootstrap(self.results)
+method simulateOnce*(e: MCEngine): float {.base.} =
+  raise newException(CatchableError, "simulateOnce not implemented")
+
+proc simulateMany*(e: MCEngine, ap = 0.1, rp = 0.1, ns = 1000):
+                  (float, float, float) =
+  e.results = @[]
+  var s1 = 0.0
+  var s2 = 0.0
+  e.convergence = false
+  for k in 1 ..< ns:
+    let x = e.simulateOnce()
+    e.results.add x
+    s1 += x
+    s2 += x * x
+    let mu = s1 / float(k)
+    let variance = s2 / float(k) - mu * mu
+    let dmu = sqrt(variance / float(k))
+    if k > 10 and abs(dmu) < max(ap, abs(mu) * rp):
+      e.convergence = true
+      break
+  e.results.sort()
+  bootstrap(e.results)
 \end{lstlisting}
 
 The preceding class has two methods:
@@ -10637,13 +10700,13 @@ The preceding class has two methods:
 
 It is also useful to have a function, which we call {\bf var} (aka {\it value at risk}~\cite{wilmott}), which computes a numerical value so that the output of a given percentage of the simulations falls below that value:
 
-%%% META:FILE:nlib.py
-\begin{lstlisting}[caption={in file: {\ft nlib.py}}]
-    def var(self, confidence=95):
-        index = int(0.01 * len(self.results) * confidence+0.999)
-        if len(self.results)-index < 5:
-            raise ArithmeticError("not enough data, not reliable")
-        return self.results[index]
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+proc valueAtRisk*(e: MCEngine, confidence = 95): float =
+  let index = int(0.01 * float(e.results.len) * float(confidence) + 0.999)
+  if e.results.len - index < 5:
+    raise newException(ArithmeticDefect, "not enough data, not reliable")
+  e.results[index]
 \end{lstlisting}
 
 Now, as a first example, we can recompute $\pi$ using this class:
@@ -10651,13 +10714,14 @@ Now, as a first example, we can recompute $\pi$ using this class:
 \index{class!PiSimulator}
 
 \begin{lstlisting}
->>> class PiSimulator(MCEngine):
-...     def simulate_once(self):
-...         return 4.0 if (random.random() ** 2+random.random() ** 2)<1 else 0.0
-...
->>> s = PiSimulator()
->>> s.simulate_many()
-(2.1818181818181817, 2.909090909090909, 3.6363636363636362)
+type PiSimulator = ref object of MCEngine
+method simulateOnce(e: PiSimulator): float =
+  let x = rand(1.0); let y = rand(1.0)
+  if x * x + y * y < 1.0: 4.0 else: 0.0
+
+let s = PiSimulator()
+echo s.simulateMany()
+# (2.1818181818181817, 2.909090909090909, 3.6363636363636362)
 \end{lstlisting}
 
 Our engine finds that the value of $\pi$ with 68\% confidence level is between $2.18$ and $3.63$, with the most likely value of $2.90$. Of course, this is incorrect, because it generates too few samples, but the bounds are correct, and that is what matters.
@@ -10693,30 +10757,32 @@ We can answer the first questions (the average total loss) simply multiplying th
 To answer the second question, we would need to study the width of the distribution. The problem is that, for $\alpha=1.5$, the standard deviation of the Pareto distribution is infinity, and analytical methods do not apply. We can do it using a Monte Carlo simulation:
 
 
-%%% META:FILE:risk.py
-\begin{lstlisting}[caption={in file: {\ft risk.py}}]
-from nlib import * 
-import random
+%%% META:FILE:risk.nim
+\begin{lstlisting}[caption={in file: {\ft risk.nim}}]
+import nlib
 
-class RiskEngine(MCEngine):
-    def __init__(self, lamb, xm, alpha):
-        self.lamb = lamb
-        self.xm = xm
-        self.alpha = alpha
-    def simulate_once(self):
-        total_loss = 0.0
-        t = 0.0
-        while t<260:
-            dt = random.expovariate(self.lamb)
-            amount = self.xm * random.paretovariate(self.alpha)
-            t += dt
-            total_loss += amount
-        return total_loss
+type
+  RiskEngine = ref object of MCEngine
+    lamb*, xm*, alpha*: float
 
-def main():
-    s = RiskEngine(lamb=10, xm=5000, alpha=1.5)
-    print(s.simulate_many(rp=1e-4, ns=1000))
-    print(s.var(95))
+proc newRiskEngine(lamb, xm, alpha: float): RiskEngine =
+  RiskEngine(lamb: lamb, xm: xm, alpha: alpha)
+
+method simulateOnce(e: RiskEngine): float =
+  var totalLoss = 0.0
+  var t = 0.0
+  while t < 260:
+    let dt = -ln(rand(1.0)) / e.lamb
+    let amount = e.xm * pow(1.0 - rand(1.0), -1.0 / e.alpha)
+    t += dt
+    totalLoss += amount
+  totalLoss
+
+proc main() =
+  randomize()
+  let s = newRiskEngine(lamb = 10.0, xm = 5000.0, alpha = 1.5)
+  echo s.simulateMany(rp = 1e-4, ns = 1000)
+  echo s.valueAtRisk(95)
 
 main()
 \end{lstlisting}
@@ -10763,33 +10829,35 @@ To simulate the system, we create a class {\ft Network} that extends {\ft MCEngi
 
 \index{class!NetworkReliability}
 
-%%% META:FILE:network.py
-\begin{lstlisting}[caption={in file: {\ft network.py}}]
-from nlib import * 
-import random
+%%% META:FILE:network.nim
+\begin{lstlisting}[caption={in file: {\ft network.nim}}]
+import nlib, std/random
 
-class NetworkReliability(MCEngine):
-    def __init__(self, n_nodes, start, stop):
-        self.links = []
-        self.n_nodes = n_nodes
-        self.start = start
-        self.stop = stop
-    def add_link(self, i, j, failure_probability):
-        self.links.append((i, j, failure_probability))
-    def simulate_once(self):
-        nodes = DisjointSets(self.n_nodes)
-        for i, j, pf in self.links:
-            if random.random()>pf:
-                nodes.join(i, j)
-        return nodes.joined(i, j)
+type
+  NetworkReliability = ref object of MCEngine
+    nNodes*, start*, stop*: int
+    links*: seq[(int, int, float)]
 
-def main():
-    s = NetworkReliability(100, start=0, stop=1)
-    for k in range(300):
-        s.add_link(random.randint(0, 99), 
-                   random.randint(0, 99), 
-                   random.random())
-    print(s.simulate_many())
+proc newNetworkReliability(nNodes, start, stop: int): NetworkReliability =
+  NetworkReliability(nNodes: nNodes, start: start, stop: stop)
+
+proc addLink(s: NetworkReliability, i, j: int,
+             failureProbability: float) =
+  s.links.add (i, j, failureProbability)
+
+method simulateOnce(s: NetworkReliability): float =
+  let nodes = newDisjointSets(s.nNodes)
+  for (i, j, pf) in s.links:
+    if rand(1.0) > pf:
+      discard nodes.join(i, j)
+  if nodes.joined(s.start, s.stop): 1.0 else: 0.0
+
+proc main() =
+  randomize()
+  let s = newNetworkReliability(100, start = 0, stop = 1)
+  for _ in 0 ..< 300:
+    s.addLink(rand(99), rand(99), rand(1.0))
+  echo s.simulateMany()
 
 main()
 \end{lstlisting}
@@ -10815,50 +10883,57 @@ Here is a possible implementation of the process. We store each event that happe
 
 \index{class!NuclearReactor}
 
-%%% META:FILE:nuclear.py
-\begin{lstlisting}[caption={in file: {\ft nuclear.py}}]
-from nlib import * 
-import math
-import random
+%%% META:FILE:nuclear.nim
+\begin{lstlisting}[caption={in file: {\ft nuclear.nim}}]
+import nlib, std/random, std/math, nimpy
 
-class NuclearReactor(MCEngine):
-    def __init__(self, radius, mean_free_path=1.91, threshold=200):
-        self.radius = radius
-        self.density = 1.0/mean_free_path
-        self.threshold = threshold
-    def point_on_sphere(self):
-        while True:
-            x, y, z = random.random(), random.random(), random.random()
-            d = math.sqrt(x * x+y * y+z * z)
-            if d<1: return (x/d, y/d, z/d)  # project on surface
-    def simulate_once(self):
-        p = (0, 0, 0)
-        events = [p]
-        while events:
-            event = events.pop()
-            v = self.point_on_sphere()
-            d1 = random.expovariate(self.density)
-            d2 = random.expovariate(self.density)
-            p1 = (p[0]+v[0] * d1, p[1]+v[1] * d1, p[2]+v[2] * d1)
-            p2 = (p[0]-v[0] * d2, p[1]-v[1] * d2, p[2]-v[2] * d2)
-            if p1[0] ** 2+p1[1] ** 2+p1[2] ** 2 < self.radius:
-                events.append(p1)
-            if p2[0] ** 2+p2[1] ** 2+p2[2] ** 2 < self.radius:
-                events.append(p2)
-            if len(events) > self.threshold:
-                return 1.0
-        return 0.0
+type
+  NuclearReactor = ref object of MCEngine
+    radius*, density*: float
+    threshold*: int
 
-def main():
-    s = NuclearReactor(MCEngine)
-    data = []
-    s.radius = 0.01
-    while s.radius<21:
-        r = s.simulate_many(ap=0.01, rp=0.01, ns=1000, nm=100)
-        data.append((s.radius, r[1], (r[2]-r[0])/2))
-        s.radius *= 1.2
-    c = Canvas(title="Critical Mass", xlab="Radius", ylab="Probability Chain Reaction")
-    c.plot(data).errorbar(data).save("nuclear.png")
+proc newNuclearReactor(radius: float, meanFreePath = 1.91,
+                       threshold = 200): NuclearReactor =
+  NuclearReactor(radius: radius, density: 1.0 / meanFreePath,
+                 threshold: threshold)
+
+proc pointOnSphereLocal(): (float, float, float) =
+  while true:
+    let x = rand(1.0); let y = rand(1.0); let z = rand(1.0)
+    let d = sqrt(x*x + y*y + z*z)
+    if d < 1: return (x/d, y/d, z/d)
+
+method simulateOnce(s: NuclearReactor): float =
+  var events: seq[(float, float, float)] = @[(0.0, 0.0, 0.0)]
+  while events.len > 0:
+    let p = events.pop()
+    let (vx, vy, vz) = pointOnSphereLocal()
+    let d1 = -ln(rand(1.0)) / s.density
+    let d2 = -ln(rand(1.0)) / s.density
+    let p1 = (p[0] + vx*d1, p[1] + vy*d1, p[2] + vz*d1)
+    let p2 = (p[0] - vx*d2, p[1] - vy*d2, p[2] - vz*d2)
+    if p1[0]^2 + p1[1]^2 + p1[2]^2 < s.radius:
+      events.add p1
+    if p2[0]^2 + p2[1]^2 + p2[2]^2 < s.radius:
+      events.add p2
+    if events.len > s.threshold:
+      return 1.0
+  return 0.0
+
+proc main() =
+  randomize()
+  let plt = pyImport("matplotlib.pyplot")
+  var data: seq[(float, float, float)] = @[]
+  var radius = 0.01
+  while radius < 21.0:
+    let s = newNuclearReactor(radius)
+    let r = s.simulateMany(ap = 0.01, rp = 0.01, ns = 1000)
+    data.add (radius, r[1], (r[2] - r[0]) / 2.0)
+    radius *= 1.2
+  discard plt.title("Critical Mass")
+  discard plt.errorbar(data.mapIt(it[0]), data.mapIt(it[1]),
+                       yerr = data.mapIt(it[2]))
+  discard plt.savefig("nuclear.png")
 
 main()
 \end{lstlisting}
@@ -10935,22 +11010,26 @@ I$.
 
 Here is a program in Python:
 
-%%% META:FILE:integrate.py
-\begin{lstlisting}[caption={in file: {\ft integrate.py}}]
-class MCIntegrator(MCEngine):
-    def __init__(self, f, a, b):
-        self.f = f
-        self.a = a
-        self.b = b
-    def simulate_once(self):
-        a, b, f = self.a, self.b, self.f
-        x = a+(b-a) * random.random()
-        g = (b-a) * f(x)
-        return g
+%%% META:FILE:integrate.nim
+\begin{lstlisting}[caption={in file: {\ft integrate.nim}}]
+import nlib, std/random, std/math
 
-def main():
-    s = MCIntegrator(f=lambda x: math.sin(x), a=0, b=1)
-    print(s.simulate_many())
+type
+  MCIntegrator = ref object of MCEngine
+    f*: proc(x: float): float
+    a*, b*: float
+
+proc newMCIntegrator(f: proc(x: float): float, a, b: float): MCIntegrator =
+  MCIntegrator(f: f, a: a, b: b)
+
+method simulateOnce(s: MCIntegrator): float =
+  let x = s.a + (s.b - s.a) * rand(1.0)
+  (s.b - s.a) * s.f(x)
+
+proc main() =
+  randomize()
+  let s = newMCIntegrator(proc(x: float): float = sin(x), 0.0, 1.0)
+  echo s.simulateMany()
 
 main()
 \end{lstlisting}
@@ -11046,16 +11125,23 @@ I = \int_0^1 dx_0 \int_0^1 dx_1 \int_0^1 dx_2 \int_0^1 dx_3 sin(x_0+x_1+x_2+x_3)
 
 Here is the Python code:
 \begin{lstlisting}
->>> class MCIntegrator(MCEngine):
-...     def simulate_once(self):
-...         volume =  1.0
-...         while True:
-...             x = [random.random() for d in range(4)]
-...             if sum(xi ** 2 for xi in x)<1: break
-...         return volume * self.f(x)
->>> s = MCIntegrator()
->>> s.f = lambda x: math.sin(x[0]+x[1]+x[2]+x[3])
->>> s.simulate_many()
+type
+  MCIntegrator4D = ref object of MCEngine
+    f*: proc(x: array[4, float]): float
+
+method simulateOnce(s: MCIntegrator4D): float =
+  let volume = 1.0
+  var x: array[4, float]
+  while true:
+    for d in 0 ..< 4: x[d] = rand(1.0)
+    var s2 = 0.0
+    for d in 0 ..< 4: s2 += x[d] * x[d]
+    if s2 < 1.0: break
+  volume * s.f(x)
+
+let s = MCIntegrator4D(
+  f: proc(x: array[4, float]): float = sin(x[0] + x[1] + x[2] + x[3]))
+echo s.simulateMany()
 \end{lstlisting}
 
 \goodbreak\section{Stochastic, Markov, Wiener, and processes}
@@ -11285,16 +11371,12 @@ where $\Delta_t$ is the length of the time interval, $r$ is the risk-free rate, 
 
 Here is a Python code to simulate an asset price using a binomial tree:
 \begin{lstlisting}
-def BinomialSimulation(S0, u, d, p, n):
-    data=[]
-    S=S0
-    for i in range(n):
-        data.append(S)
-        if uniform()<p:
-            S=u * S
-        else:
-            S=d * S
-    return data
+proc binomialSimulation(S0, u, d, p: float, n: int): seq[float] =
+  var S = S0
+  for _ in 0 ..< n:
+    result.add S
+    if rand(1.0) < p: S = u * S
+    else:             S = d * S
 \end{lstlisting}
 
 The function takes the present spot value, $S_0$, of the asset, the values
@@ -11356,37 +11438,37 @@ p(r_T) \propto \exp\left(-\frac{(r_T-\mu T)^2}{2\sigma^2 T}\right)
 
 This allows us to write the following:
 
-%%% META:FILE:options.py
-\begin{lstlisting}[caption={in file: {\ft options.py}}]
-from nlib import * 
+%%% META:FILE:options.nim
+\begin{lstlisting}[caption={in file: {\ft options.nim}}]
+import nlib, std/random, std/math
 
-class EuropeanCallOptionPricer(MCEngine):
-    def simulate_once(self):
-        T = self.time_to_expiration
-        S = self.spot_price
-        R_T = random.gauss(self.mu * T, self.sigma * sqrt(T))
-        S_T = S * exp(r_T)
-        payoff = max(S_T-self.strike, 0)
-        return self.present_value(payoff)
+type
+  EuropeanCallOptionPricer = ref object of MCEngine
+    spotPrice*, mu*, sigma*, strike*, riskFreeRate*: float
+    timeToExpiration*: int
 
-    def present_value(self, payoff):
-        daily_return = self.risk_free_rate/250
-        return payoff * exp(-daily_return * self.time_to_expiration)
+proc presentValue(p: EuropeanCallOptionPricer, payoff: float): float =
+  let dailyReturn = p.riskFreeRate / 250.0
+  payoff * exp(-dailyReturn * float(p.timeToExpiration))
 
-def main():
-    pricer = EuropeanCallOptionPricer()
-     # parameters of the underlying
-    pricer.spot_price = 100  # dollars
-    pricer.mu = 0.12/250  # daily drift term
-    pricer.sigma = 0.30/sqrt(250)  # daily variance
-     # parameters of the option
-    pricer.strike = 110  # dollars
-    pricer.time_to_expiration = 90  # days
-     # parameters of the market
-    pricer.risk_free_rate = 0.05  # 5% annual return
+method simulateOnce(p: EuropeanCallOptionPricer): float =
+  let T = float(p.timeToExpiration)
+  let S = p.spotPrice
+  let rT = gauss(p.mu * T, p.sigma * sqrt(T))
+  let ST = S * exp(rT)
+  let payoff = max(ST - p.strike, 0.0)
+  p.presentValue(payoff)
 
-    result = pricer.simulate_many(ap=0.01, rp=0.01)  # precision: 1c or 1%
-    print(result)
+proc main() =
+  randomize()
+  let pricer = EuropeanCallOptionPricer(
+    spotPrice: 100.0,
+    mu: 0.12 / 250.0,
+    sigma: 0.30 / sqrt(250.0),
+    strike: 110.0,
+    timeToExpiration: 90,
+    riskFreeRate: 0.05)
+  echo pricer.simulateMany(ap = 0.01, rp = 0.01)
 
 main()
 \end{lstlisting}
@@ -11417,51 +11499,55 @@ A different type of option will have a different payoff function $f(x)$.
 
 Note one never models the option. One only models the underlying asset. The option payoff is given. We only choose the most efficient algorithm based on the model and the option:
 
-%%% META:FILE:options.py
-\begin{lstlisting}[caption={in file: {\ft options.py}}]
-from nlib import * 
+%%% META:FILE:options.nim
+\begin{lstlisting}[caption={in file: {\ft options.nim}}]
+import nlib, std/random, std/math
 
-class GenericOptionPricer(MCEngine):
-    def simulate_once(self):
-        S = self.spot_price
-        path = [S]
-        for t in range(self.time_to_expiration):
-            r = self.model(dt=1.0)
-            S = S * exp(r)
-            path.append(S)
-        return self.present_value(self.payoff(path))
+type
+  GenericOptionPricer = ref object of MCEngine
+    spotPrice*, mu*, sigma*, strike*, riskFreeRate*: float
+    timeToExpiration*: int
+    payoff*: proc(p: GenericOptionPricer, path: seq[float]): float
 
-    def model(self, dt=1.0):
-        return random.gauss(self.mu * dt, self.sigma * sqrt(dt))
+proc model(p: GenericOptionPricer, dt = 1.0): float =
+  gauss(p.mu * dt, p.sigma * sqrt(dt))
 
-    def present_value(self, payoff):
-        daily_return = self.risk_free_rate/250
-        return payoff * exp(-daily_return * self.time_to_expiration)
+proc presentValue(p: GenericOptionPricer, payoff: float): float =
+  let dailyReturn = p.riskFreeRate / 250.0
+  payoff * exp(-dailyReturn * float(p.timeToExpiration))
 
-    def payoff_european_call(self, path):
-        return max(path[-1]-self.strike, 0)
-    def payoff_european_put(self, path):
-        return max(path[-1]-self.strike, 0)
-    def payoff_exotic_call(self, path):
-        last_5_days = path[-5]
-        mean_last_5_days = sum(last_5_days)/len(last_5_days)
-        return max(mean_last_5_days-self.strike, 0)
+method simulateOnce(p: GenericOptionPricer): float =
+  var S = p.spotPrice
+  var path = @[S]
+  for _ in 0 ..< p.timeToExpiration:
+    let r = p.model()
+    S = S * exp(r)
+    path.add S
+  p.presentValue(p.payoff(p, path))
 
-def main():
-    pricer = GenericOptionPricer()
-     # parameters of the underlying
-    pricer.spot_price = 100  # dollars
-    pricer.mu = 0.12/250  # daily drift term
-    pricer.sigma = 0.30/sqrt(250)  # daily variance
-     # parameters of the option
-    pricer.strike = 110  # dollars
-    pricer.time_to_expiration = 90  # days
-    pricer.payoff = pricer.payoff_european_call
-     # parameters of the market
-    pricer.risk_free_rate = 0.05  # 5% annual return
+proc payoffEuropeanCall(p: GenericOptionPricer, path: seq[float]): float =
+  max(path[^1] - p.strike, 0.0)
 
-    result = pricer.simulate_many(ap=0.01, rp=0.01)  # precision: 1c or 1%
-    print(result)
+proc payoffEuropeanPut(p: GenericOptionPricer, path: seq[float]): float =
+  max(p.strike - path[^1], 0.0)
+
+proc payoffExoticCall(p: GenericOptionPricer, path: seq[float]): float =
+  let last5 = path[^5 .. ^1]
+  var s = 0.0
+  for v in last5: s += v
+  max(s / float(last5.len) - p.strike, 0.0)
+
+proc main() =
+  randomize()
+  let pricer = GenericOptionPricer(
+    spotPrice: 100.0,
+    mu: 0.12 / 250.0,
+    sigma: 0.30 / sqrt(250.0),
+    strike: 110.0,
+    timeToExpiration: 90,
+    riskFreeRate: 0.05,
+    payoff: payoffEuropeanCall)
+  echo pricer.simulateMany(ap = 0.01, rp = 0.01)
 
 main()
 \end{lstlisting}
@@ -11525,25 +11611,27 @@ The procedure works as follows:
 The set of random numbers ${\bf x}^{(i)}$ generated in this way for large
 values of $i$ will have a probability mass function given by $p({\bf x})$.
 
-Here is a possible implementation in Python:
+Here is a possible implementation in Nim using an iterator:
 \begin{lstlisting}
-def metropolis(p, q, x=None):
-    while True:
-        x_old=x
-        x = q(x)
-        if p(x)/p(x_old)<random.random()
-            x=x_old
-        yield x
+iterator metropolis(p: proc(x: seq[float]): float,
+                    q: proc(x: seq[float]): seq[float],
+                    x0: seq[float]): seq[float] =
+  var x = x0
+  while true:
+    let xOld = x
+    x = q(x)
+    if p(x) / p(xOld) < rand(1.0):
+      x = xOld
+    yield x
 
-def P(x):
-    return 6.0 * (x[0]-x[1]) ** 2
+proc P(x: seq[float]): float = 6.0 * (x[0] - x[1]) ^ 2
+proc Q(x: seq[float]): seq[float] = @[rand(1.0), rand(1.0)]
 
-def Q(x):
-    return [random.random(), random.random()]
-
-for i, x in enumerate(metropolis(P, Q)):
-    print(x)
-    if i == 100: break
+var i = 0
+for x in metropolis(P, Q, @[0.0, 0.0]):
+  echo x
+  inc i
+  if i == 100: break
 \end{lstlisting}
 
 In this example, {\ft Q} is the function that generates random points in the domain (in the example, $[0, 1]\times[0, 1]$), and ${\ft P}$ is an example probability $p(x) = 6(x_0-x_1)^2$. Notice we used the Python {\ft yield} function instead of {\ft return}. This means the function is a generator and we can loop over its returned (yielded) values without having to generate all of them at once. They are generated as needed.
@@ -11553,20 +11641,24 @@ In this example, {\ft Q} is the function that generates random points in the dom
 Notice that the Metropolis algorithm can generate (and will generate) repeated values. This is because the next random vector $x$ is highly correlated with the previous vector. For this reason, it is often necessary to de-correlate metropolis values by skipping some of them:
 
 \begin{lstlisting}
-def metropolis_decorrelate(p, q, x=None, ds=100):
-    k = 0
-    for x in metropolis(p, q, x):
-        k += 1
-        if k % ds == ds-1:
-             yield x
+iterator metropolisDecorrelate(p: proc(x: seq[float]): float,
+                               q: proc(x: seq[float]): seq[float],
+                               x0: seq[float], ds = 100): seq[float] =
+  var k = 0
+  for x in metropolis(p, q, x0):
+    inc k
+    if k mod ds == ds - 1:
+      yield x
 \end{lstlisting}
 
 The value of {\ft ds} must be fixed empirically. The value of {\ft ds} which is large enough to make the next vector independent from the previous one is called {\it decorrelation length}. This generator works as the previous one. For example:
 
 \begin{lstlisting}
-for i, x in enumerate(metropolis_decorrelate(P, Q)):
-    print(x)
-    if i == 100: break
+var i = 0
+for x in metropolisDecorrelate(P, Q, @[0.0, 0.0]):
+  echo x
+  inc i
+  if i == 100: break
 \end{lstlisting}
 
 
@@ -11608,58 +11700,70 @@ Here is the code for a three-dimensional spin system:
 
 \index{class!Ising}
 
-%%% META:FILE:ising.py
-\begin{lstlisting}[caption={in file: {\ft ising.py}}]
-import random
-import math
-from nlib import Canvas, mean, sd
+%%% META:FILE:ising.nim
+\begin{lstlisting}[caption={in file: {\ft ising.nim}}]
+import nlib, std/random, std/math, nimpy, std/sequtils
 
-class Ising:
-    def __init__(self, n):
-        self.n = n
-        self.s = [[[1 for x in range(n)] for y in range(n)]
-                  for z in range(n)]
-        self.magnetization = n ** 3
+type
+  Ising* = ref object
+    n*: int
+    s*: seq[seq[seq[int]]]
+    magnetization*: int
 
-    def __getitem__(self, point):
-        n = self.n
-        x, y, z = point
-        return self.s[(x+n)%n][(y+n)%n][(z+n)%n]
+proc newIsing*(n: int): Ising =
+  result = Ising(n: n, magnetization: n * n * n)
+  result.s = newSeqWith(n, newSeqWith(n, newSeqWith(n, 1)))
 
-    def __setitem__(self, point, value):
-        n = self.n
-        x, y, z = point
-        self.s[(x+n)%n][(y+n)%n][(z+n)%n] = value
+proc `[]`*(ising: Ising, x, y, z: int): int =
+  let n = ising.n
+  ising.s[((x mod n) + n) mod n]
+              [((y mod n) + n) mod n]
+              [((z mod n) + n) mod n]
 
-    def step(self, t, h):
-        n = self.n
-        x, y, z = random.randint(0, n-1), random.randint(0, n-1), random.randint(0, n-1)
-        neighbors = [(x-1, y, z), (x+1, y, z), (x, y-1, z), (x, y+1, z), (x, y, z-1), (x, y, z+1)]
-        dE = -2.0 * self[x, y, z] * (h+sum(self[xn, yn, zn] for xn, yn, zn in neighbors))
-        if dE > t * math.log(random.random()):
-            self[x, y, z] = -self[x, y, z]
-            self.magnetization += 2 * self[x, y, z]
-        return self.magnetization
+proc `[]=`*(ising: Ising, x, y, z, value: int) =
+  let n = ising.n
+  ising.s[((x mod n) + n) mod n]
+              [((y mod n) + n) mod n]
+              [((z mod n) + n) mod n] = value
 
-def simulate(steps=100):
-    ising = Ising(n=10)
-    data = {}
-    for h in range(0, 11):  # external magnetic field
-        data[h] = []
-        for t in range(1, 11):  # temperature, in units of K
-            m = [ising.step(t=t, h=h) for k in range(steps)]
-            mu = mean(m)  # average magnetization
-            sigma = sd(m)
-            data[h].append((t, mu, sigma))
-    return data
+proc step*(ising: Ising, t, h: float): int =
+  let n = ising.n
+  let x = rand(n - 1); let y = rand(n - 1); let z = rand(n - 1)
+  let nbrs = [(x-1, y, z), (x+1, y, z),
+              (x, y-1, z), (x, y+1, z),
+              (x, y, z-1), (x, y, z+1)]
+  var sumNbrs = 0
+  for (xn, yn, zn) in nbrs: sumNbrs += ising[xn, yn, zn]
+  let dE = -2.0 * float(ising[x, y, z]) * (h + float(sumNbrs))
+  if dE > t * ln(rand(1.0)):
+    ising[x, y, z] = -ising[x, y, z]
+    ising.magnetization += 2 * ising[x, y, z]
+  ising.magnetization
 
-def main(name="ising.png"):
-    data = simulate(steps = 10000)
-    canvas = Canvas(xlab="temperature", ylab="magnetization")
-    for h in data:
-        color = "#%.2x0000" % (h * 25)
-        canvas.errorbar(data[h]).plot(data[h], color=color)
-    canvas.save(name)
+proc simulate*(steps = 100): Table[int, seq[(float, float, float)]] =
+  let ising = newIsing(10)
+  for h in 0 .. 10:
+    var row: seq[(float, float, float)] = @[]
+    for t in 1 .. 10:
+      var m: seq[float] = @[]
+      for _ in 0 ..< steps:
+        m.add float(ising.step(float(t), float(h)))
+      row.add (float(t), mean(m), sd(m))
+    result[h] = row
+
+proc main*(name = "ising.png") =
+  randomize()
+  let data = simulate(steps = 10000)
+  let plt = pyImport("matplotlib.pyplot")
+  for h, series in data:
+    let color = "#" & h.toHex(2) & "0000"
+    discard plt.errorbar(series.mapIt(it[0]),
+                         series.mapIt(it[1]),
+                         yerr = series.mapIt(it[2]),
+                         color = color)
+  discard plt.xlabel("temperature")
+  discard plt.ylabel("magnetization")
+  discard plt.savefig(name)
 
 main()
 \end{lstlisting}
@@ -11702,73 +11806,80 @@ Here we assume only two types of amino-acids (H for hydrophobic and P for hydrop
 
 \index{protein folding}\index{class!Protein}
 
-%%% META:FILE:folding.py
-\begin{lstlisting}[caption={in file: {\ft folding.py}}]
-import random
-import math
-import copy
-from nlib import * 
+%%% META:FILE:folding.nim
+\begin{lstlisting}[caption={in file: {\ft folding.nim}}]
+import nlib, std/random, std/math, std/tables
 
-class Protein:
+type
+  Cell = (int, int, int)
+  Protein* = ref object
+    aminoacids*: string
+    angles*: seq[int]
+    folding*: Table[Cell, char]
+    energy*: int
 
-    moves = {0:(lambda x, y, z: (x+1, y, z)), 
-             1:(lambda x, y, z: (x-1, y, z)), 
-             2:(lambda x, y, z: (x, y+1, z)), 
-             3:(lambda x, y, z: (x, y-1, z)), 
-             4:(lambda x, y, z: (x, y, z+1)), 
-             5:(lambda x, y, z: (x, y, z-1))}
+proc move(angle: int, c: Cell): Cell =
+  case angle
+  of 0: (c[0]+1, c[1], c[2])
+  of 1: (c[0]-1, c[1], c[2])
+  of 2: (c[0], c[1]+1, c[2])
+  of 3: (c[0], c[1]-1, c[2])
+  of 4: (c[0], c[1], c[2]+1)
+  of 5: (c[0], c[1], c[2]-1)
+  else: c
 
-    def __init__(self, aminoacids):
-        self.aminoacids = aminoacids
-        self.angles = [0] * (len(aminoacids)-1)
-        self.folding = self.compute_folding(self.angles)
-        self.energy = self.compute_energy(self.folding)
+proc computeFolding(p: Protein, angles: seq[int]): Table[Cell, char] =
+  var c: Cell = (0, 0, 0)
+  var k = 0
+  result[c] = p.aminoacids[k]
+  for angle in angles:
+    inc k
+    let nxt = move(angle, c)
+    if nxt in result: return initTable[Cell, char]()
+    result[nxt] = p.aminoacids[k]
+    c = nxt
 
-    def compute_folding(self, angles):
-        folding = {}
-        x, y, z = 0, 0, 0
-        k = 0
-        folding[x, y, z] = self.aminoacids[k]
-        for angle in angles:
-            k += 1
-            xn, yn, zn = self.moves[angle](x, y, z)
-            if (xn, yn, zn) in folding: return None  # impossible folding
-            folding[xn, yn, zn] = self.aminoacids[k]
-            x, y, z = xn, yn, zn
-        return folding
+proc computeEnergy(p: Protein, folding: Table[Cell, char]): int =
+  for c, aa in folding:
+    if aa == 'H':
+      for face in 0 ..< 6:
+        if not (move(face, c) in folding):
+          inc result
 
-    def compute_energy(self, folding):
-        E = 0
-        for x, y, z in folding:
-            aminoacid = folding[x, y, z]
-            if aminoacid == "H":
-                for face in range(6):
-                    if not self.moves[face](x, y, z) in folding:
-                        E = E + 1
-        return E
+proc newProtein*(aminoacids: string): Protein =
+  result = Protein(
+    aminoacids: aminoacids,
+    angles: newSeq[int](aminoacids.len - 1))
+  result.folding = result.computeFolding(result.angles)
+  result.energy = result.computeEnergy(result.folding)
 
-    def fold(self, t):
-        while True:
-            new_angles = copy.copy(self.angles)
-            n = random.randint(1, len(self.aminoacids)-2)
-            new_angles[n] = random.randint(0, 5)
-            new_folding = self.compute_folding(new_angles)
-            if new_folding: break  # found a valid folding
-        new_energy = self.compute_energy(new_folding)
-        if (self.energy-new_energy) > t * math.log(random.random()):
-            self.angles = new_angles
-            self.folding = new_folding
-            self.energy = new_energy
-        return self.energy
+proc fold*(p: Protein, t: float): int =
+  var newAngles: seq[int]
+  var newFolding: Table[Cell, char]
+  while true:
+    newAngles = p.angles
+    let n = rand(1 .. p.aminoacids.len - 2)
+    newAngles[n] = rand(0 .. 5)
+    newFolding = p.computeFolding(newAngles)
+    if newFolding.len > 0: break
+  let newEnergy = p.computeEnergy(newFolding)
+  if float(p.energy - newEnergy) > t * ln(rand(1.0)):
+    p.angles = newAngles
+    p.folding = newFolding
+    p.energy = newEnergy
+  p.energy
 
-def main():
-    aminoacids = ''.join(random.choice("HP") for k in range(20))
-    protein = Protein(aminoacids)
-    t = 10.0
-    while t>1e-5:
-        protein.fold(t = t)
-        print(protein.energy, protein.angles)
-        t = t * 0.99  # cool
+proc main() =
+  randomize()
+  var aas = ""
+  for _ in 0 ..< 20:
+    aas.add (if rand(1.0) < 0.5: 'H' else: 'P')
+  let protein = newProtein(aas)
+  var t = 10.0
+  while t > 1e-5:
+    discard protein.fold(t)
+    echo protein.energy, " ", protein.angles
+    t *= 0.99
 
 main()
 \end{lstlisting}
@@ -11884,43 +11995,40 @@ If we identify each node on the network with a unique integer number called its 
 
 \index{PSim emulator}
 
-%%% META:FILE:psim.py
-\begin{lstlisting}[caption={in file: {\ft psim.py}}]
-import math
-import functools
-import os
-import pickle
-import time
+%%% META:FILE:psim.nim
+\begin{lstlisting}[caption={in file: {\ft psim.nim}}]
+import std/math
 
-def BUS(i, j):
-    return True
+type Topology* = proc(i, j: int): bool
 
-def SWITCH(i, j):
-    return True
+proc BUS*(): Topology = (proc(i, j: int): bool = true)
+proc SWITCH*(): Topology = (proc(i, j: int): bool = true)
 
-def MESH1(p):
-    return lambda i, j, p=p: (i - j) ** 2 == 1
+proc MESH1*(p: int): Topology =
+  result = proc(i, j: int): bool = (i - j) * (i - j) == 1
 
-def TORUS1(p):
-    return lambda i, j, p=p: (i - j + p) % p == 1 or (j - i + p) % p == 1
+proc TORUS1*(p: int): Topology =
+  result = proc(i, j: int): bool =
+    ((i - j + p) mod p == 1) or ((j - i + p) mod p == 1)
 
-def MESH2(p):
-    q = int(math.sqrt(p) + 0.1)
-    return lambda i, j, q=q: (
-        (i % q - j % q) ** 2, (i / q - j / q) ** 2) in [(1, 0), (0, 1)]
+proc MESH2*(p: int): Topology =
+  let q = int(sqrt(float(p)) + 0.1)
+  result = proc(i, j: int): bool =
+    let dx = (i mod q - j mod q) * (i mod q - j mod q)
+    let dy = (i div q - j div q) * (i div q - j div q)
+    (dx, dy) in [(1, 0), (0, 1)]
 
-def TORUS2(p):
-    q = int(math.sqrt(p) + 0.1)
-    return lambda i, j, q=q: (
-        ((i % q - j % q + q) % q, (i / q - j / q + q) % q)
-        in [(0, 1), (1, 0)]
-        or
-        ((j % q - i % q + q) % q, (j / q - i / q + q) % q)
-        in [(0, 1), (1, 0)]
-    )
+proc TORUS2*(p: int): Topology =
+  let q = int(sqrt(float(p)) + 0.1)
+  result = proc(i, j: int): bool =
+    ((i mod q - j mod q + q) mod q,
+     (i div q - j div q + q) mod q) in [(0, 1), (1, 0)] or
+    ((j mod q - i mod q + q) mod q,
+     (j div q - i div q + q) mod q) in [(0, 1), (1, 0)]
 
-def TREE(i, j):
-    return i == int((j - 1) / 2) or j == int((i - 1) / 2)
+proc TREE*(): Topology =
+  result = proc(i, j: int): bool =
+    i == (j - 1) div 2 or j == (i - 1) div 2
 \end{lstlisting}
 
 \goodbreak\subsection{Network characteristics}
@@ -12094,103 +12202,77 @@ Therefore the speedup is theoretically limited.
 
 \goodbreak\section{Message passing}\index{message passing}
 
-Consider the following Python program:
+Consider the following Nim program:
 \begin{lstlisting}
-def f():
-    if os.fork(): print(True)
-    else: print(False)
+import std/posix
+
+proc f() =
+  if fork() != 0:
+    echo true
+  else:
+    echo false
 f()
 \end{lstlisting}
 The output of the current program is
 \begin{lstlisting}
-True
-False
+true
+false
 \end{lstlisting}
 
-The function {\ft fork} creates a copy of the current process (a child). The parent process returns the ID of the child process, and the child process returns 0. Therefore the {\ft if} condition is both true and false, just on different processes.
+{\ft fork} (from {\ft std/posix}) creates a copy of the current process (a child). The parent gets the child's PID; the child gets 0. So the {\ft if} branches both ways, on different processes.
 
-The source of {\ft PSim} is include in the {\ft psim.py} file.
+The source of {\ft PSim} is included in the {\ft psim.nim} file.
 
 \index{PSim emulator}\index{class!PSim}\index{send}\index{recv}\index{point-to-point}
 
-%%% META:FILE:psim.py
-\begin{lstlisting}[caption={in file: {\ft psim.py}}]
-class PSim(object):
-    def __init__(self, p, topology=SWITCH, logfilename=None):
-        """
-        forks p-1 processes and creates p * p
-        """
-        self.logfile = logfilename and open(logfilename, "w")
-        self.topology = topology
-        self.log("START: creating %i parallel processes\n" % p)
-        self.nprocs = p
-        self.pipes = {}
-        for i in range(p):
-            for j in range(p):
-                self.pipes[i, j] = os.pipe()
-        self.rank = 0
-        for i in range(1, p):
-            if not os.fork():
-                self.rank = i
-                break
-        self.log("START: done.\n")
+%%% META:FILE:psim.nim
+\begin{lstlisting}[caption={in file: {\ft psim.nim}}]
+import std/[json, threadpool, locks]
 
-    def log(self, message):
-        """
-        logs the message into self._logfile
-        """
-        if self.logfile != None:
-            self.logfile.write(message)
+type
+  PSim* = ref object
+    nprocs*, rank*: int
+    topology*: Topology
+    pipes*: seq[seq[Channel[string]]]
+    logFile*: File
 
-    def send(self, j, data):
-        """
-        sends data to process #j
-        """
-        if not self.topology(self.rank, j):
-            raise RuntimeError("topology violation")
-        self._send(j, data)
+proc newPSim*(p: int, topology = SWITCH(),
+              logFilename = ""): PSim =
+  ## In Python the constructor forks `p-1` extra processes; in Nim we
+  ## use threads with `std/threadpool` and one `Channel[string]` per
+  ## (sender, receiver) pair, so messages are serialized via JSON.
+  result = PSim(nprocs: p, topology: topology, rank: 0)
+  result.pipes = newSeq[seq[Channel[string]]](p)
+  for i in 0 ..< p:
+    result.pipes[i] = newSeq[Channel[string]](p)
+    for j in 0 ..< p:
+      result.pipes[i][j].open()
+  if logFilename.len > 0:
+    result.logFile = open(logFilename, fmWrite)
 
-    def _send(self, j, data):
-        """
-        sends data to process #j ignoring topology
-        """
-        if j < 0 or j >= self.nprocs:
-            self.log("process %i: send(%i, ...) failed!\n" %
-                     (self.rank, j))
-            raise Exception
-        self.log("process %i: send(%i, %s) starting...\n" %
-                 (self.rank, j, repr(data)))
-        s = pickle.dumps(data)
-        os.write(self.pipes[self.rank, j][1], str.zfill(str(len(s)), 10))
-        os.write(self.pipes[self.rank, j][1], s)
-        self.log("process %i: send(%i, %s) success.\n" %
-                 (self.rank, j, repr(data)))
+proc log*(s: PSim, message: string) =
+  if not s.logFile.isNil: s.logFile.write(message)
 
-    def recv(self, j):
-        """
-        returns the data received from process #j
-        """
-        if not self.topology(self.rank, j):
-            raise RuntimeError("topology violation")
-        return self._recv(j)
+proc privateSend*[T](s: PSim, j: int, data: T) =
+  if j < 0 or j >= s.nprocs:
+    raise newException(IOError, "send: invalid rank")
+  s.pipes[s.rank][j].send($ %*data)
 
-    def _recv(self, j):
-        """
-        returns the data received from process #j ignoring topology
-        """
-        if j < 0 or j >= self.nprocs:
-            self.log("process %i: recv(%i) failed!\n" % (self.rank, j))
-            raise RuntimeError
-        self.log("process %i: recv(%i) starting...\n" % (self.rank, j))
-        try:
-            size = int(os.read(self.pipes[j, self.rank][0], 10))
-            s = os.read(self.pipes[j, self.rank][0], size)
-        except Exception as e:
-            self.log("process %i: COMMUNICATION ERROR!!!\n" % (self.rank))
-            raise e
-        data = pickle.loads(s)
-        self.log("process %i: recv(%i) done.\n" % (self.rank, j))
-        return data
+proc send*[T](s: PSim, j: int, data: T) =
+  if not s.topology(s.rank, j):
+    raise newException(IOError, "topology violation")
+  s.privateSend(j, data)
+
+proc privateRecv*[T](s: PSim, j: int, _: typedesc[T]): T =
+  if j < 0 or j >= s.nprocs:
+    raise newException(IOError, "recv: invalid rank")
+  let raw = s.pipes[j][s.rank].recv()
+  to(parseJson(raw), T)
+
+proc recv*[T](s: PSim, j: int, t: typedesc[T]): T =
+  if not s.topology(s.rank, j):
+    raise newException(IOError, "topology violation")
+  s.privateRecv(j, t)
 \end{lstlisting}
 
 \index{communicator}
@@ -12200,63 +12282,63 @@ An instance of the class {\ft PSim} is an object that can be used to determine t
 A PSim program starts by importing and creating an instance of the {\ft PSim} class. The constructor takes two arguments, the number of parallel processes you want and the network topology you want to emulate. Before returning the {\ft PSim} instance, the constructor makes $p-1$ copies of the running process and creates sockets connecting each two of them. Here is a simple example in which we make two parallel processes and send a message from process 0 to process 1:
 
 \begin{lstlisting}
-from psim import * 
+import psim
 
-comm = PSim(2, SWITCH)
+let comm = newPSim(2, SWITCH())
 if comm.rank == 0:
-    comm.send(1, "Hello World")
+  comm.send(1, "Hello World")
 elif comm.rank == 1:
-    message = comm.recv(0)
-    print(message)
+  let message = comm.recv(0, string)
+  echo message
 \end{lstlisting}
 
 Here is a more complex example that creates $p=10$ parallel processes, and node 0 sends a message to each one of them:
 
 
 \begin{lstlisting}
-from psim import * 
+import psim
 
-p = 10
-
-comm = PSim(p, SWITCH)
+const p = 10
+let comm = newPSim(p, SWITCH())
 if comm.rank == 0:
-    for other in range(1, p):
-       comm.send(other, "Hello %s" % p)
+  for other in 1 ..< p:
+    comm.send(other, "Hello " & $p)
 else:
-    message = comm.recv(0)
-    print(message)
+  let message = comm.recv(0, string)
+  echo message
 \end{lstlisting}
 
  Following is a more complex example that implements a parallel scalar product. The process with rank 0 makes up two vectors and distributes pieces of them to the other processes. Each process computes a part of the scalar product. Of course, the scalar product runs in linear time, and it is very inefficient to parallelize it, yet we do it for didactic purposes.
 
 \index{parallel!scalar product}
 
-%%% META:FILE:psim_scalar.py
-\begin{lstlisting}[caption={in file: {\ft psim\_scalar.py}}]
-import random
-from psim import PSim
+%%% META:FILE:psim_scalar.nim
+\begin{lstlisting}[caption={in file: {\ft psim\_scalar.nim}}]
+import psim, std/random
 
-def scalar_product_test1(n, p):
-    comm = PSim(p)
-    h = n/p
-    if comm.rank == 0:
-        a = [random.random() for i in range(n)]
-        b = [random.random() for i in range(n)]
-        for k in range(1, p):
-            comm.send(k, a[k * h:k * h+h])
-            comm.send(k, b[k * h:k * h+h])
-    else:
-        a = comm.recv(0)
-        b = comm.recv(0)
-    scalar = sum(a[i] * b[i] for i in range(h))
-    if comm.rank == 0:
-        for k in range(1, p):
-            scalar += comm.recv(k)
-        print(scalar)
-    else:
-        comm.send(0, scalar)
+proc scalarProductTest1(n, p: int) =
+  let comm = newPSim(p)
+  let h = n div p
+  var a, b: seq[float]
+  if comm.rank == 0:
+    randomize()
+    for _ in 0 ..< n: a.add rand(1.0)
+    for _ in 0 ..< n: b.add rand(1.0)
+    for k in 1 ..< p:
+      comm.send(k, a[k*h ..< k*h + h])
+      comm.send(k, b[k*h ..< k*h + h])
+  else:
+    a = comm.recv(0, seq[float])
+    b = comm.recv(0, seq[float])
+  var scalar = 0.0
+  for i in 0 ..< h: scalar += a[i] * b[i]
+  if comm.rank == 0:
+    for k in 1 ..< p: scalar += comm.recv(k, float)
+    echo scalar
+  else:
+    comm.send(0, scalar)
 
-scalar_product_test(10, 2)
+scalarProductTest1(10, 2)
 \end{lstlisting}
 
 Most parallel algorithms follow a similar pattern. One process has access to IO. That process reads and scatters the data. The other processes perform their part of the computation; the results are reduced (aggregated) and sent back to the root process. This pattern may be repeated by multiple functions, perhaps in loops. Different functions may handle different data structure and may have different communication patterns. The one thing that must be constant throughout the run is the number of processes because one wants to pair each process with one computing unit.
@@ -12265,55 +12347,30 @@ Most parallel algorithms follow a similar pattern. One process has access to IO.
 
 \index{mergesort!parallel}
 
-%%% META:FILE:psim_mergesort.py
-\begin{lstlisting}[caption={in file: {\ft psim\_mergesort.py}}]
-import random
-from psim import PSim
+%%% META:FILE:psim_mergesort.nim
+\begin{lstlisting}[caption={in file: {\ft psim\_mergesort.nim}}]
+import psim, nlib, std/random
+# `merge` and `mergesort` are reused from nlib (chapter 3).
 
-def mergesort(A, x=0, z=None):
-    if z is None: z = len(A)
-    if x<z-1:
-        y = int((x+z)/2)
-        mergesort(A, x, y)
-        mergesort(A, y, z)
-        merge(A, x, y, z)
+proc mergesortTest(n, p: int) =
+  let comm = newPSim(p)
+  if comm.rank == 0:
+    randomize()
+    var data: seq[float]
+    for _ in 0 ..< n: data.add rand(1.0)
+    comm.send(1, data[n div 2 .. ^1])
+    mergesort(data, 0, n div 2)
+    let other = comm.recv(1, seq[float])
+    for i, v in other:
+      data[n div 2 + i] = v
+    merge(data, 0, n div 2, n)
+    echo data
+  else:
+    var data = comm.recv(0, seq[float])
+    mergesort(data)
+    comm.send(0, data)
 
-def merge(A, x, y, z):
-    B, i, j = [], x, y
-    while True:
-        if A[i]<=A[j]:
-            B.append(A[i])
-            i=i+1
-        else:
-            B.append(A[j])
-            j=j+1
-        if i == y:
-            while j<z:
-                B.append(A[j])
-                j=j+1
-            break
-        if j == z:
-            while i<y:
-                B.append(A[i])
-                i=i+1
-            break
-    A[x:z]=B
-
-def mergesort_test(n, p):
-    comm = PSim(p)
-    if comm.rank == 0:
-        data = [random.random() for i in range(n)]
-        comm.send(1, data[n/2:])
-        mergesort(data, 0, n/2)
-        data[n/2:] = comm.recv(1)
-        merge(data, 0, n/2, n)
-        print(data)
-    else:
-        data = comm.recv(0)
-        mergesort(data)
-        comm.send(0, data)
-
-mergesort_test(20, 2)
+mergesortTest(20, 2)
 \end{lstlisting}
 
 More interesting patterns are global communication patterns implemented on top of {\ft send} and {\ft recv}. Subsequently, we discuss the most common: broadcast, scatter, collect, and reduce. Our implementation is not the most efficient, but it is the simplest. In principle, there should be a different implementation for each type of network topology to take advantage of its features.
@@ -12323,34 +12380,22 @@ More interesting patterns are global communication patterns implemented on top o
 
 The simplest type of broadcast is the one-2-all, which consists of one process (source) sending a message (value) to every other process. A more complex broadcast is when each process broadcasts a message simultaneously and each node receives the list of values ordered by the rank of the sender:
 
-%%% META:FILE:psim.py
-\begin{lstlisting}[caption={in file: {\ft psim.py}}]
+%%% META:FILE:psim.nim
+\begin{lstlisting}[caption={in file: {\ft psim.nim}}]
+proc one2allBroadcast*[T](s: PSim, source: int, value: T): T =
+  if s.rank == source:
+    for i in 0 ..< s.nprocs:
+      if i != source:
+        s.privateSend(i, value)
+    result = value
+  else:
+    result = s.privateRecv(source, T)
 
-    def one2all_broadcast(self, source, value):
-        self.log(
-            "process %i: BEGIN one2all_broadcast(%i, %s)\n"
-            % (self.rank, source, repr(value))
-        )
-        if self.rank == source:
-            for i in range(0, self.nprocs):
-                if i != source:
-                    self._send(i, value)
-        else:
-            value = self._recv(source)
-        self.log(
-            "process %i: END one2all_broadcast(%i, %s)\n"
-            % (self.rank, source, repr(value))
-        )
-        return value
-
-    def all2all_broadcast(self, value):
-        self.log("process %i: BEGIN all2all_broadcast(%s)\n" %
-                 (self.rank, repr(value)))
-        vector = self.all2one_collect(0, value)
-        vector = self.one2all_broadcast(0, vector)
-        self.log("process %i: END all2all_broadcast(%s)\n" %
-                 (self.rank, repr(value)))
-        return vector
+proc all2oneCollect*[T](s: PSim, destination: int, value: T): seq[T]
+proc all2allBroadcast*[T](s: PSim, value: T): seq[T] =
+  var vector = s.all2oneCollect(0, value)
+  vector = s.one2allBroadcast(0, vector)
+  vector
 \end{lstlisting}
 
 We have implemented the all-to-all broadcast using a trick. We collected all values and sent them to the node with rank 0 (via a function collect), and then we did a one-to-all broadcast of the entire list from node 0. In general, the implementation depends on the topology of the available network.
@@ -12358,14 +12403,13 @@ We have implemented the all-to-all broadcast using a trick. We collected all val
 Here is an example of an application of broadcasting:
 
 \begin{lstlisting}
-from psim import * 
+import psim
 
-p = 10
-
-comm = PSim(p, SWITCH)
-message = "Hello World" if comm.rank == 0 else None
-message = comm.one2all_broadcast(0, message)
-print(message)
+const p = 10
+let comm = newPSim(p, SWITCH())
+var message = if comm.rank == 0: "Hello World" else: ""
+message = comm.one2allBroadcast(0, message)
+echo message
 \end{lstlisting}
 
 Notice how before the broadcast, only the process with rank 0 has knowledge of the message. After broadcast, all nodes are aware of it. Also notice that {\ft one2all\_broadcast} is a global communication function, and all processes must call it. Its first argument is the rank of the broadcasting process (0), while the second argument is the message to be broadcasted (only the value from node 0 is actually used).
@@ -12374,67 +12418,46 @@ Notice how before the broadcast, only the process with rank 0 has knowledge of t
 
 The all-to-one collect pattern works as follows. Every process sends a value to process {\ft destination}, which receives the values in a list ordered according to the rank of the senders:
 
-%%% META:FILE:psim.py
-\begin{lstlisting}[caption={in file: {\ft psim.py}}]
+%%% META:FILE:psim.nim
+\begin{lstlisting}[caption={in file: {\ft psim.nim}}]
+proc one2allScatter*[T](s: PSim, source: int,
+                        data: seq[T]): seq[T] =
+  if s.rank == source:
+    var h = data.len div s.nprocs
+    if data.len mod s.nprocs != 0: h += 1
+    for i in 0 ..< s.nprocs:
+      s.privateSend(i, data[i * h ..< min(i * h + h, data.len)])
+  result = s.privateRecv(source, seq[T])
 
-    def one2all_scatter(self, source, data):
-        self.log(
-            "process %i: BEGIN all2one_scatter(%i, %s)\n"
-            % (self.rank, source, repr(data))
-        )
-        if self.rank == source:
-            h, remainder = divmod(len(data), self.nprocs)
-            if remainder:
-                h += 1
-            for i in range(self.nprocs):
-                self._send(i, data[i * h : i * h + h])
-        vector = self._recv(source)
-        self.log(
-            "process %i: END all2one_scatter(%i, %s)\n"
-            % (self.rank, source, repr(data))
-        )
-        return vector
-
-    def all2one_collect(self, destination, data):
-        self.log(
-            "process %i: BEGIN all2one_collect(%i, %s)\n"
-            % (self.rank, destination, repr(data))
-        )
-        self._send(destination, data)
-        if self.rank == destination:
-            vector = [self._recv(i) for i in range(self.nprocs)]
-        else:
-            vector = []
-        self.log(
-            "process %i: END all2one_collect(%i, %s)\n"
-            % (self.rank, destination, repr(data))
-        )
-        return vector
+proc all2oneCollect*[T](s: PSim, destination: int, value: T): seq[T] =
+  s.privateSend(destination, value)
+  if s.rank == destination:
+    for i in 0 ..< s.nprocs:
+      result.add s.privateRecv(i, T)
 \end{lstlisting}
 
 Here is a revised version of the previous scalar product example using scatter:
 
-%%% META:FILE:psim_scalar2.py
-\begin{lstlisting}[caption={in file: {\ft psim\_scalar2.py}}]
-import random
-from psim import PSim
+%%% META:FILE:psim_scalar2.nim
+\begin{lstlisting}[caption={in file: {\ft psim\_scalar2.nim}}]
+import psim, std/random
 
-def scalar_product_test2(n, p):
-    comm = PSim(p)
-    a = b = None
-    if comm.rank == 0:
-        a = [random.random() for i in range(n)]
-        b = [random.random() for i in range(n)]
-    a = comm.one2all_scatter(0, a)
-    b = comm.one2all_scatter(0, b)
+proc scalarProductTest2(n, p: int) =
+  let comm = newPSim(p)
+  var a, b: seq[float]
+  if comm.rank == 0:
+    randomize()
+    for _ in 0 ..< n: a.add rand(1.0)
+    for _ in 0 ..< n: b.add rand(1.0)
+  a = comm.one2allScatter(0, a)
+  b = comm.one2allScatter(0, b)
+  var scalar = 0.0
+  for i in 0 ..< a.len: scalar += a[i] * b[i]
+  scalar = comm.all2oneReduce(0, scalar,
+                               proc(x, y: float): float = x + y)
+  if comm.rank == 0: echo scalar
 
-    scalar = sum(a[i] * b[i] for i in range(len(a)))
-
-    scalar = comm.all2one_reduce(0, scalar)
-    if comm.rank == 0:
-        print(scalar)
-
-scalar_product_test2(10, 2)
+scalarProductTest2(10, 2)
 \end{lstlisting}
 
 \goodbreak\subsection{Reduce}\index{reduce}
@@ -12443,122 +12466,100 @@ The all-to-one reduce pattern is very similar to the collect, except that the {\
 
 The all-to-all reduce is similar to reduce, but every process will get the result of the reduction, not just one {\ft destination} node. This may be achieved by an all-to-one reduce followed by a one-to-all broadcast:
 
-%%% META:FILE:psim.py
-\begin{lstlisting}[caption={in file: {\ft psim.py}}]
+%%% META:FILE:psim.nim
+\begin{lstlisting}[caption={in file: {\ft psim.nim}}]
+proc all2oneReduce*[T](s: PSim, destination: int, value: T,
+                       op: proc(a, b: T): T): T =
+  s.privateSend(destination, value)
+  if s.rank == destination:
+    result = s.privateRecv(0, T)
+    for i in 1 ..< s.nprocs:
+      result = op(result, s.privateRecv(i, T))
 
-    def all2one_reduce(self, destination, value, op=lambda a, b: a + b):
-        self.log("process %i: BEGIN all2one_reduce(%s)\n" %
-                 (self.rank, repr(value)))
-        self._send(destination, value)
-        if self.rank == destination:
-            result = functools.reduce(
-                op, [self._recv(i) for i in range(self.nprocs)])
-        else:
-            result = None
-        self.log("process %i: END all2one_reduce(%s)\n" %
-                 (self.rank, repr(value)))
-        return result
-
-    def all2all_reduce(self, value, op=lambda a, b: a + b):
-        self.log("process %i: BEGIN all2all_reduce(%s)\n" %
-                 (self.rank, repr(value)))
-        result = self.all2one_reduce(0, value, op)
-        result = self.one2all_broadcast(0, result)
-        self.log("process %i: END all2all_reduce(%s)\n" %
-                 (self.rank, repr(value)))
-        return result
+proc all2allReduce*[T](s: PSim, value: T,
+                       op: proc(a, b: T): T): T =
+  result = s.all2oneReduce(0, value, op)
+  result = s.one2allBroadcast(0, result)
 \end{lstlisting}
 
 And here are some examples of a reduce operation that can be passed to the {\ft op} argument of the {\ft all2one\_reduce} and {\ft all2all\_reduce} methods:
 
-%%% META:FILE:psim.py
-\begin{lstlisting}[caption={in file: {\ft psim.py}}]
-    @staticmethod
-    def sum(x, y):
-        return x + y
-
-    @staticmethod
-    def mul(x, y):
-        return x * y
-
-    @staticmethod
-    def max(x, y):
-        return max(x, y)
-
-    @staticmethod
-    def min(x, y):
-        return min(x, y)
+%%% META:FILE:psim.nim
+\begin{lstlisting}[caption={in file: {\ft psim.nim}}]
+proc psumOp*[T](x, y: T): T = x + y
+proc pmulOp*[T](x, y: T): T = x * y
+proc pmaxOp*[T](x, y: T): T = (if x > y: x else: y)
+proc pminOp*[T](x, y: T): T = (if x < y: x else: y)
 \end{lstlisting}
 
 Graph algorithms can also be parallelized, for example, the Prim algorithm. One way to do it is to represent the graph using an adjacency matrix where term $i, j$ corresponds to the link between vertex $i$ and vertex $j$. The term can be {\ft None} if the link does not exist. Any graph algorithm, in some order, loops over the vertices and over the neighbors. This step can be parallelized by assigning different columns of the adjacency matrix to different computing processes. Each process only loops over some of the neighbors of the vertex being processed. Here is an example of the Prim algorithm:
 
-%%% META:FILE:psim_prim.py
-\begin{lstlisting}[caption={in file: {\ft psim\_prim.py}}]
-from psim import PSim
-import random
+%%% META:FILE:psim_prim.nim
+\begin{lstlisting}[caption={in file: {\ft psim\_prim.nim}}]
+import psim, std/random, std/sequtils
 
-def random_adjacency_matrix(n):
-    A = []
-    for r in range(n):
-        A.append([0] * n)
-    for r in range(n):
-        for c in range(0, r):
-            A[r][c] = A[c][r] = random.randint(1, 100)
-    return A
+proc randomAdjacencyMatrix(n: int): seq[seq[int]] =
+  result = newSeqWith(n, newSeq[int](n))
+  for r in 0 ..< n:
+    for c in 0 ..< r:
+      let v = rand(1 .. 100)
+      result[r][c] = v
+      result[c][r] = v
 
-class Vertex(object):
-    def __init__(self, path=[0, 1, 2]):
-        self.path = path
+type
+  Vertex = object
+    path: seq[int]
 
-def weight(path=[0, 1, 2], adjacency=None):
-    return sum(adjacency[path[i-1]][path[i]] for i in range(1, len(path)))
+proc weight(path: seq[int], adjacency: seq[seq[int]]): int =
+  for i in 1 ..< path.len:
+    result += adjacency[path[i-1]][path[i]]
 
-def bb(adjacency, p=1):
-    n = len(adjacency)
-    comm = PSim(p)
-    Q = []
-    path = [0]
-    Q.append(Vertex(path))
-    bound = float("inf')
-    optimal = None
-    local_vertices = comm.one2all_scatter(0, range(n))
-    while True:
-        if comm.rank == 0:
-            vertex = Q.pop() if Q else None
-        else:
-            vertex = None
-        vertex = comm.one2all_broadcast(0, vertex)
-        if vertex is None:
-            break
-        P = []
-        for k in local_vertices:
-            if not k in vertex.path:
-                new_path = vertex.path+[k]
-                new_path_length = weight(new_path, adjacency)
-                if new_path_length<bound:
-                    if len(new_path) == n:
-                        new_path.append(new_path[0])
-                        new_path_length = weight(new_path, adjacency)
-                        if new_path_length<bound:
-                            bound = new_path_length  # bcast
-                            optimal = new_path       # bcast
-                    else:
-                        new_vertex = Vertex(new_path)
-                        P.append(new_vertex)  # fix this
-                print(new_path, new_path_length)
-        x = (bound, optimal)
-        x = comm.all2all_reduce(x, lambda a, b: min(a, b))
-        (bound, optimal) = x
+proc bb(adjacency: seq[seq[int]], p = 1): (seq[int], int) =
+  let n = adjacency.len
+  let comm = newPSim(p)
+  var Q: seq[Vertex] = @[Vertex(path: @[0])]
+  var bound = high(int)
+  var optimal: seq[int] = @[]
+  let localVertices = comm.one2allScatter(0, toSeq(0 ..< n))
+  while true:
+    var vertex: Vertex
+    var sentinel = false
+    if comm.rank == 0:
+      if Q.len == 0:
+        sentinel = true
+      else:
+        vertex = Q.pop()
+    sentinel = comm.one2allBroadcast(0, sentinel)
+    if sentinel: break
+    vertex = comm.one2allBroadcast(0, vertex)
+    var P: seq[Vertex] = @[]
+    for k in localVertices:
+      if k notin vertex.path:
+        var newPath = vertex.path & k
+        var newPathLength = weight(newPath, adjacency)
+        if newPathLength < bound:
+          if newPath.len == n:
+            newPath.add newPath[0]
+            newPathLength = weight(newPath, adjacency)
+            if newPathLength < bound:
+              bound = newPathLength
+              optimal = newPath
+          else:
+            P.add Vertex(path: newPath)
+        echo newPath, " ", newPathLength
+    let x = comm.all2allReduce((bound, optimal),
+              proc(a, b: (int, seq[int])): (int, seq[int]) =
+                if a[0] < b[0]: a else: b)
+    bound = x[0]
+    optimal = x[1]
+    let collected = comm.all2oneCollect(0, P)
+    if comm.rank == 0:
+      for batch in collected:
+        for v in batch: Q.add v
+  (optimal, bound)
 
-        P = comm.all2one_collect(0, P)
-        if comm.rank == 0:
-            for item in P:
-                Q+=item
-    return optimal, bound
-
-
-m = random_adjacency_matrix(5)
-print(bb(m, p=2))
+let m = randomAdjacencyMatrix(5)
+echo bb(m, p = 2)
 \end{lstlisting}
 
 \goodbreak\subsection{Barrier}\index{barrier}
@@ -12567,13 +12568,10 @@ Another global communication pattern is the barrier. It forces all processes whe
 
 Here we implement it using a simple all-to-all broadcast:
 
-%%% META:FILE:psim.py
-\begin{lstlisting}[caption={in file: {\ft psim.py}}]
-    def barrier(self):
-        self.log("process %i: BEGIN barrier()\n" % (self.rank))
-        self.all2all_broadcast(0)
-        self.log("process %i: END barrier()\n" % (self.rank))
-        return
+%%% META:FILE:psim.nim
+\begin{lstlisting}[caption={in file: {\ft psim.nim}}]
+proc barrier*(s: PSim) =
+  discard s.all2allBroadcast(0)
 \end{lstlisting}
 
 The use of {\ft barrier} is usually a symptom of bad code because it forces parallel processes to wait for other processes without data actually being transferred.
@@ -12628,40 +12626,41 @@ It is necessary but not sufficient to have implementations of the map and reduce
 
 Here is a nonparallel implementation that explains the data workflow better:
 
-%%% META:FILE:mapreduce.py
-\begin{lstlisting}
-def mapreduce(mapper, reducer, data):
-    """
-    >>> def mapfn(x): return x%2, 1
-    >>> def reducefn(key, values): return len(values)
-    >>> data = list(range(100))
-    >>> mapreduce(mapfn, reducefn, data)
-    {0: 50, 1: 50}
-    """
-    partials = {}
-    results = {}
-    for item in data:
-        key, value = mapper(item)
-        if not key in partials:
-            partials[key]=[value]
-        else:
-            partials[key].append(value)
-    for key, values in partials.items():
-        results[key] = reducer(key, values)
-    return results
+%%% META:FILE:mapreduce.nim
+\begin{lstlisting}[caption={in file: {\ft mapreduce.nim}}]
+import std/tables
+
+proc mapreduce*[T, K, V, R](
+    mapper: proc(item: T): (K, V),
+    reducer: proc(key: K, values: seq[V]): R,
+    data: seq[T]): Table[K, R] =
+  var partials = initTable[K, seq[V]]()
+  for item in data:
+    let (key, value) = mapper(item)
+    if key notin partials:
+      partials[key] = @[value]
+    else:
+      partials[key].add value
+  for key, values in partials:
+    result[key] = reducer(key, values)
 \end{lstlisting}
 
 And here is an example we can use to find how many random DNA strings contain the subsequence ``ACTA'':
 
-%%% META:FILE:mapreduce.py
 \begin{lstlisting}
->>> from random import choice
->>> strings = [''.join(choice("ATGC") for i in range(10))
-...            for j in range(100)]
->>> def mapfn(string): return ("ACCA" in string, 1)
->>> def reducefn(check, values): return len(values)
->>> print(mapreduce(mapfn, reducefn, strings))
-{False: ..., True: ...}
+import std/[random, strutils]
+randomize()
+let bases = "ATGC"
+var strings: seq[string]
+for _ in 0 ..< 100:
+  var s = ""
+  for _ in 0 ..< 10: s.add bases[rand(bases.len - 1)]
+  strings.add s
+
+proc mapfn(s: string): (bool, int) = (("ACCA" in s), 1)
+proc reducefn(check: bool, values: seq[int]): int = values.len
+echo mapreduce(mapfn, reducefn, strings)
+# {false: ..., true: ...}
 \end{lstlisting}
 
 The important thing about the preceding code is that there are two loops in Map-Reduce. Each loop consists of executing tasks (map tasks and reduce tasks) which are independent from each other (all the maps are independent, all the reduce are independent, but the reduce depend on the maps). Because they are independent, they can be executed in parallel and by different processes.
@@ -12676,36 +12675,7 @@ Function {\ft mincemeat} uses the python libraries {\ft asyncore} and {\ft async
 
 Here is an example of a {\ft mincemeat} program:
 
-%%% META:FILE:mincemeat_example.py
-\begin{lstlisting}
-import mincemeat
-from random import choice
-
-strings = [''.join(choice("ATGC") for i in range(10)) for j in range(100)]
-def mapfn(k1, string): yield ("ACCA" in string, 1)
-def reducefn(k2, values): return len(values)
-
-s = mincemeat.Server()
-s.mapfn = mapfn
-s.reducefn = reducefn
-s.datasource = dict(enumerate(strings))
-results = s.run_server(password="changeme")
-print(results)
-\end{lstlisting}
-
-Notice that in {\ft mincemeat}, the data source is a list of key value dictionaries where the values are the ones to be processed. The key is also passed to the {\ft mapfn} function as first argument. Moreover, the {\ft mapfn} function can return more than one value using {\ft yield}. This syntactical notation makes {\ft minemeat} more flexible.
-
-Execute this script on the server:
-\begin{lstlisting}
-> python mincemeat_example.py
-\end{lstlisting}
-Run mincemeat.py as a worker on a client:
-\begin{lstlisting}
-> python mincemeat.py -p changeme [server address]
-\end{lstlisting}
-You can run more than one worker, although for this example the server will terminate almost immediately.
-
-Function {\ft mincemeat} works fine for many applications, but sometimes one wishes for a more powerful tool that provides faster communications, support for arbitrary languages, and better scalability tools and monitoring tools. An example in Python is {\ft disco}. A standard tool, written in Java but supporting Python, is {\bf Hadoop}.
+Nim does not ship with a direct equivalent of {\ft mincemeat}; it is a Python library and a small reference distributed map-reduce server. In Nim a similar pattern can be built with {\ft std/asyncnet} (event-driven sockets) and {\ft std/asyncdispatch} (cooperative scheduling), or by using a third-party MPI/Hadoop-style runtime; the {\ft mapreduce} routine above already captures the algorithmic core. For multi-machine deployments, projects such as Hadoop (Java with Nim binding through JNI) or any MPI implementation accessed through Nim's C interop remain available.
 
 
 \chapter{Appendices}
