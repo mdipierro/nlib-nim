@@ -8,7 +8,7 @@
 % - rewrite Matrix
 % - dimensional analysis
 
-\title{\LARGE Annotated Algorithms in Python\\[0.5em]
+\title{\LARGE Annotated Algorithms in Nim\\[0.5em]
        \large With Applications in Physics, Biology, Finance (3rd Ed.)}
 
 \author{Massimo Di Pierro}
@@ -54,17 +54,36 @@
 \newtheorem * {note}{Note}
 \newtheorem{case}{Case}
 
-\lstset{language=Python, 
-   breaklines=true, basicstyle=\ttfamily\color{black}\footnotesize, 
-   keywordstyle=\bf\ttfamily, 
-   commentstyle=\it\ttfamily, 
-   stringstyle=\color{dg}\it\ttfamily, 
-   numbers=left, numberstyle=\color{dg}\tiny, stepnumber=1, numbersep=5pt, 
-   % frame=lr, 
-   backgroundcolor=\color{lg}, 
-   tabsize=4, showspaces=false, 
-   showstringspaces=false, 
-   aboveskip=6pt, 
+% listings does not have built-in Nim support, but Nim's keyword set is
+% close enough to typical scripting languages for the listings package;
+% we define a custom Nim mode by listing the keywords explicitly.
+\lstdefinelanguage{Nim}{
+  morekeywords={addr, and, as, asm, bind, block, break, case, cast,
+                concept, const, continue, converter, defer, discard,
+                distinct, div, do, elif, else, end, enum, except, export,
+                finally, for, from, func, if, import, in, include,
+                interface, is, isnot, iterator, let, macro, method, mixin,
+                mod, nil, not, notin, object, of, or, out, proc, ptr,
+                raise, ref, return, shl, shr, static, template, try,
+                tuple, type, using, var, when, while, xor, yield,
+                true, false, result, echo, openArray, seq, array, string,
+                int, int8, int16, int32, int64, uint, uint8, uint16,
+                uint32, uint64, float, float32, float64, bool, char, void},
+  sensitive=true,
+  morecomment=[l]{\#},
+  morestring=[b]",
+  morestring=[b]'
+}
+\lstset{language=Nim,
+   breaklines=true, basicstyle=\ttfamily\color{black}\footnotesize,
+   keywordstyle=\bf\ttfamily,
+   commentstyle=\it\ttfamily,
+   stringstyle=\color{dg}\it\ttfamily,
+   numbers=left, numberstyle=\color{dg}\tiny, stepnumber=1, numbersep=5pt,
+   backgroundcolor=\color{lg},
+   tabsize=4, showspaces=false,
+   showstringspaces=false,
+   aboveskip=6pt,
    belowskip=-3pt
 }
 
@@ -219,9 +238,9 @@ In the chapter on parallel algorithms, we learn how to distribute those iteratio
 
 In the ultimate analysis, we can even try to understand ourselves as a parallel machine that models the input from the world by approximations. The brain is a graph that can be modeled by a neural network. The learning process is an ongoing optimization process in which the brain adjusts its synapses to produce better and better responses. The decision process mimics a search tree. We solve problems by searching for the most similar problems that we have encountered before, then we refine the solution. Our DNA is a code that evolved to efficiently compress the information necessary to grow us from a single cell into a complex being. We evolved according to evolutionary mechanisms that can be modeled using genetic algorithms. We can find our similarities with other organisms using the longest common subsequence algorithm. We can reconstruct our evolutionary tree using shortest-path algorithms and find out how we came to be.
 
-\section{About Python}
+\section{About Nim}
 
-The programming language used in this book is Python~\cite{python} version 3.8. This is because Python algorithms are very similar to the corresponding pseudo-code, and therefore this language is easy to read and understand compared to other languages such as C++ or Java. Moreover, Python is a popular language in many Universities and Companies (including Google).
+The programming language used in this book is Nim~\cite{nim}. Nim has a high-level surface syntax that stays close to pseudo-code, which keeps the algorithms easy to read; at the same time it is statically typed and compiles to small native binaries, so the same code that documents an algorithm also runs efficiently. Nim's standard library, generics, first-class procedures, and lightweight macro system are sufficient for everything in this book without resorting to external dependencies.
 
 The goal of the book is to explain the algorithms by building them from scratch. It is not our goal to teach the user about existing libraries that may be (and often are) faster than our implementation.
 
@@ -231,13 +250,13 @@ This book is divided into the following chapters:
 
 \begin{itemize}
 \item This introduction.
-\item An introduction to the Python programming language. The introduction assumes the reader is not new to basic programming concepts, such as conditionals, loops, and function calls, and teaches the basic syntax of the Python language, with particular focus on those built-in modules that are important for scientific applications (math, cmath, decimal, random) and a few others.
+\item An introduction to the Nim programming language. The introduction assumes the reader is not new to basic programming concepts such as conditionals, loops, and function calls, and teaches the syntax of Nim with particular focus on the standard-library modules that are important for scientific applications ({\ft std/math}, {\ft std/random}, {\ft std/sequtils}, {\ft std/tables}) and a few others.
 \item Chapter 3 is a short review of the general theory of algorithms with applications. There we review how to determine the running time of an algorithm from simple loops to more complex recursive algorithms. We review basic data structures used to store information such as lists, arrays, stacks, queues, trees, and graphs. We also review the classification of basic algorithms such as divide-and-conquer, dynamic programming, and greedy algorithms. In the examples, we peek into complex algorithms such as Shannon--Fano compression, a maze solver, a clustering algorithm, and a neural network.
 \item In chapter 4, we talk about traditional numerical algorithms, in particular, linear algebra, solvers, optimizers, integrators, and Fourier--Laplace transformations. We start by reviewing the concept of Taylor series and their convergence to understand approximations, sources of error, and convergence. We then use those concepts to build more complex algorithms by systematically improving their first-order (linear) approximation. Linear algebra serves us as a tool to approximate and implement functions of many variables.
-\item In chapter 5, we provide a review of probability and statistics and implement basic Python functions to perform statistical analysis of random variables.
-\item In chapter 6, we discuss algorithms to generate random numbers from many distributions. Python already has a built-in module to generate random numbers, and in subsequent chapters, we utilize it, yet in this chapter, we discuss in detail how pseudo random number generators work and their pitfalls.
+\item In chapter 5, we provide a review of probability and statistics and implement basic procedures to perform statistical analysis of random variables.
+\item In chapter 6, we discuss algorithms to generate random numbers from many distributions. Nim's {\ft std/random} module provides high-quality uniform and Gaussian generators, and in subsequent chapters we use it, yet in this chapter we discuss in detail how pseudo random number generators work and their pitfalls.
 \item In chapter 7, we write about Monte Carlo simulations. This is a numerical technique that utilizes random numbers to solve otherwise deterministic problems. For example, in chapter 4, we talk about numerical integration in one dimension. Those algorithms can be extended to perform numerical integration in a few (two, three, sometimes four) dimensions, but they fail for very large numbers of dimensions. That is where Monte Carlo integration comes to our rescue, as it increasingly becomes the integration method of choice as the number of variables increases. We present applications of Monte Carlo simulations.
-\item In chapter 8, we discuss parallel algorithms. There are many paradigms for parallel programming these days, and the tendency is toward inhomogeneous architectures. Although we review many different types of architectures, we focus on three programming paradigms that have been very successful: message-passing, map-reduce, and multithreaded GPU programming. In the message-passing case, we create a simple ``parallel simulator'' (PSim) in Python that allows us to understand the basic ideas behind message passing and issues with different network topologies. In the GPU case, we use the pyOpenCL~\cite{pyopencl} library to run OpenCL kernels on the GPU (or CPUs).
+\item In chapter 8, we discuss parallel algorithms. There are many paradigms for parallel programming these days, and the tendency is toward inhomogeneous architectures. Although we review many different types of architectures, we focus on two programming paradigms that have been very successful: message-passing and map-reduce. We build a small ``parallel simulator'' ({\ft PSim}) on top of Nim's threadpool and channels, which lets us experiment with different network topologies and message-passing patterns on a single machine.
 
 \item Finally, in the appendix, we provide a compendium of useful formulas and definitions.
 \end{itemize}
@@ -251,12 +270,11 @@ We utilize the following software libraries developed by the author and availabl
 \item \url{http://github.com/mdipierro/buckingham}
 \end{itemize}
 
-We also utilize the following third party libraries:
+We also utilize the following third-party tools:
 
 \begin{itemize}
-\item \url{http://matplotlib.org/}
-\item \url{https://github.com/ziyuang/mincemeatpy}
-\item \url{https://pypi.org/project/pyopencl/}
+\item \url{https://nim-lang.org} --- the Nim compiler and standard library.
+\item \url{http://www.gnuplot.info/} --- {\ft gnuplot} is invoked from a small helper to render the figures in this book.
 \end{itemize}
 
 All the code included in these notes is released by the author under the three-clause BSD License.
@@ -271,16 +289,16 @@ Many thanks to Alan Etkins, Brian Fox, Dan Bowker, Ethan Sudman, Holly Monteith,
 
 \goodbreak\section{About Nim}
 
-Nim~\cite{nim} is a statically typed compiled systems-programming language with a high-level, Python-like surface syntax. It produces small native binaries by compiling through C, C++, or JavaScript, while its standard library and metaprogramming facilities give it the productivity of a scripting language. Nim has a strong type system, automatic memory management (with optional manual control), generics, first-class procedures, exceptions, threads, channels, and a rich macro system.
+Nim~\cite{nim} is a statically typed compiled systems-programming language with a high-level, indentation-based surface syntax. It produces small native binaries by compiling through C, C++, or JavaScript, while its standard library and metaprogramming facilities give it the productivity of a scripting language. Nim has a strong type system, automatic memory management (with optional manual control), generics, first-class procedures, exceptions, threads, channels, and a rich macro system.
 
 Three properties of Nim shape the code in this book:
 \begin{itemize}
-\item Indentation defines blocks (as in Python), but every declaration has a type. Type errors are caught at compile time.
+\item Indentation defines blocks, but every declaration has a type. Type errors are caught at compile time.
 \item Identifiers are partially style-insensitive: after the first character, underscores and case differences are ignored, so {\ft insertion\_sort}, {\ft insertionSort}, and {\ft INSERTIONSORT} refer to the same identifier. The convention used here is {\ft camelCase} for procedures and {\ft PascalCase} for types.
 \item Procedures, methods, iterators, and operators are all separately overloadable. The {\ft *} suffix marks a name as exported from a module.
 \end{itemize}
 
-Nim is interoperable with other ecosystems: through the {\ft nimpy} package it can call Python (we use it for plots through {\ft matplotlib}), through {\ft db\_sqlite} it talks to SQLite~\cite{sqlite} for persistence, and the C FFI gives it access to libraries such as BLAS or FFTW.
+Nim is interoperable with other ecosystems: through {\ft db\_sqlite} it talks to SQLite~\cite{sqlite} for persistence, and the C FFI gives it access to libraries such as BLAS or FFTW. For occasional needs that fall outside the standard library (e.g., plotting), we drive an external graphical toolkit through Nim's foreign-function bindings rather than re-implementing it.
 
 You can find tutorials, the language manual, and the standard library reference on the official Nim website.
 
@@ -358,7 +376,7 @@ echo &"pi rounded is {p:.3f}"       # pi rounded is 3.142
 
 \index{seq}\index{array}
 
-A {\ft seq[T]} is a heap-allocated, growable, ordered list of {\ft T}; it replaces Python's {\ft list}. An {\ft array[N, T]} has a fixed length {\ft N} known at compile time. Both are zero-indexed.
+A {\ft seq[T]} is a heap-allocated, growable, ordered list of {\ft T}. An {\ft array[N, T]} has a fixed length {\ft N} known at compile time. Both are zero-indexed.
 
 \begin{lstlisting}
 var xs: seq[int] = @[1, 2, 3]   # @[]: empty seq literal
@@ -422,7 +440,7 @@ let (mn, mx) = minmax(@[3.0, 1.0, 4.0, 1.0, 5.0])
 
 \index{table}\index{dict}
 
-The {\ft Table[K, V]} container in {\ft std/tables} replaces Python's {\ft dict}. {\ft initTable} creates an empty table; {\ft toTable} converts a sequence of pairs.
+The {\ft Table[K, V]} container in {\ft std/tables} provides a hash-table mapping. {\ft initTable} creates an empty table; {\ft toTable} converts a sequence of pairs.
 
 \begin{lstlisting}
 import std/tables
@@ -494,7 +512,7 @@ of 'D' .. 'F': echo "needs work"
 else: echo "?"
 \end{lstlisting}
 
-{\ft while} loops until its condition becomes false. {\ft break} and {\ft continue} work as in C/Python.
+{\ft while} loops until its condition becomes false. {\ft break} exits a loop; {\ft continue} skips to the next iteration.
 
 \begin{lstlisting}
 var n = 1
@@ -673,7 +691,7 @@ let s = Stamp(id: 1, label: "A")     # ref constructor (allocates)
 echo p.y, " ", s.label
 \end{lstlisting}
 
-Most data structures in this book ({\ft Matrix}, {\ft DisjointSets}, {\ft NeuralNetwork}, {\ft MCEngine}, ...) are {\ft ref object}s because we want them to behave like Python objects: passed by reference and mutated in place.
+Most data structures in this book ({\ft Matrix}, {\ft DisjointSets}, {\ft NeuralNetwork}, {\ft MCEngine}, ...) are {\ft ref object}s because we want them to be passed by reference and mutated in place.
 
 A common pattern is to provide a {\ft newX} constructor procedure:
 
@@ -713,7 +731,7 @@ Chapter 7's {\ft MCEngine} uses exactly this pattern: a base method {\ft simulat
 
 \goodbreak\subsection{The export marker {\ft *}}
 
-A {\ft proc}, {\ft type}, {\ft var}, or field declared with a trailing {\ft *} is exported from its module; without it, the name is private to the file. This replaces Python's {\ft \_}-prefix convention.
+A {\ft proc}, {\ft type}, {\ft var}, or field declared with a trailing {\ft *} is exported from its module; without it, the name is private to the file. This is Nim's visibility marker; there is no separate {\ft public} or {\ft private} keyword.
 
 \begin{lstlisting}
 # in nlib.nim
@@ -831,31 +849,38 @@ echo storage["pi"].getFloat
 
 The {\ft \%} prefix and {\ft \%*} macro from {\ft std/json} convert any Nim value to a {\ft JsonNode}; {\ft .getFloat}, {\ft .getStr}, {\ft .getInt}, etc., extract the typed payload back. Together they give us a key-value store usable from any chapter that needs cross-run state (e.g., the memoization examples in chapter 3 and the stock-data examples in chapter 4).
 
-\goodbreak\section{Plotting via {\ft nimpy}}
+\goodbreak\section{Plotting}
 
-\index{nimpy}\index{matplotlib}
+\index{plotting}\index{gnuplot}
 
-Nim does not ship with a plotting library, but the {\ft nimpy} package gives full access to Python from a Nim program. We use it to drive {\ft matplotlib}~\cite{matplotlib}; this is also the strategy that lets us reuse Python tools (BioPython, NumPy, etc.) when needed even though the algorithms in this book are written in Nim.
+Plotting is a peripheral concern for this book: the algorithms are independent of how their output is rendered. When a chapter produces a figure, we write the data to a CSV file and let an external plotting tool draw it. The default tool used here is {\ft gnuplot}, which reads simple ASCII data and produces PNG/PDF/SVG output without any link-time dependency on the Nim program.
 
-Install Nim with the {\ft choosenim} installer, then add {\ft nimpy} with {\ft nimble}:
+A small helper, used throughout the book, writes a sequence of $(x, y)$ pairs to a file and invokes {\ft gnuplot}:
 
-\begin{lstlisting}
-nimble install nimpy
+%%% META:FILE:nlib.nim
+\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+import std/[strutils, osproc]
+
+proc savePlot*(filename: string, xs, ys: openArray[float],
+               title = "", xlab = "x", ylab = "y") =
+  ## Writes (x, y) data to `filename.dat` and renders `filename` with
+  ## gnuplot. The output format is determined by the file extension.
+  let dataPath = filename & ".dat"
+  var f = open(dataPath, fmWrite)
+  for i in 0 ..< xs.len:
+    f.writeLine xs[i].formatFloat(ffDecimal, 6) & " " &
+                ys[i].formatFloat(ffDecimal, 6)
+  f.close()
+  discard execCmd("gnuplot -e \"" &
+                  "set terminal pngcairo; " &
+                  "set output '" & filename & "'; " &
+                  "set title '" & title & "'; " &
+                  "set xlabel '" & xlab & "'; " &
+                  "set ylabel '" & ylab & "'; " &
+                  "plot '" & dataPath & "' with lines\"")
 \end{lstlisting}
 
-A simple plot:
-
-\begin{lstlisting}
-import nimpy
-let plt = pyImport("matplotlib.pyplot")
-let xs = @[0.0, 1.0, 2.0, 3.0]
-let ys = @[0.0, 1.0, 4.0, 9.0]
-discard plt.plot(xs, ys, label = "y = x^2")
-discard plt.legend()
-discard plt.savefig("parabola.png")
-\end{lstlisting}
-
-The {\ft discard} keyword tells Nim to ignore the value returned by {\ft plt.plot} (a Python {\ft Line2D} we are not using). Throughout the book we wrap such calls in helper procedures so the imperative {\ft pyplot} API does not leak into the algorithmic code.
+Most plotting calls in the book funnel through {\ft savePlot} or its variants for histograms, scatter plots, and surface plots. Replacing {\ft gnuplot} with another back end (e.g., a native SVG writer or a C library bound through Nim's FFI) only requires re-implementing this single helper.
 
 \goodbreak\section{Putting it together}
 
@@ -1214,7 +1239,7 @@ If the input array has length 0 or 1, then it is already sorted, and the algorit
 
 If the input array has a length greater than 1, it divides the array into two subsets of about half the size. Each subarray is sorted by applying the merge sort recursively (it calls itself!). It then merges the two subarrays back into one sorted array (this step is called {\it merge}).
 
-Consider the following Python implementation of the merge sort:
+Consider the following implementation of the merge sort:
 
 \begin{lstlisting}
 proc merge[T](a: var seq[T], p, q, r: int) =
@@ -1537,7 +1562,7 @@ The recurrence relation for this algorithm is $T(n)=T(n-1)+T(n-2)+1$, and its so
 
 \index{class!Memoize}
 
-Nim does not have decorators like Python, but we can write a generic {\ft memoize} higher-order procedure that takes a recursive function (which receives the memoized closure as its first argument so it can recurse) and returns a cached version:
+We can write a generic {\ft memoize} higher-order procedure that takes a recursive function (which receives the memoized closure as its first argument so it can recurse) and returns a cached version:
 %%% META:FILE:nlib.nim
 \begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
 import std/tables
@@ -1569,7 +1594,7 @@ echo fib(11)
 # 89
 \end{lstlisting}
 
-The recursive function takes the memoized closure as its first parameter, so when it calls itself it goes through the cache. This is the Nim equivalent of Python's {\ft @memoize} decorator pattern.
+The recursive function takes the memoized closure as its first parameter, so when it calls itself it goes through the cache.
 
 This makes the algorithm run much faster. Its running time goes from exponential to linear. Notice that the preceding {\ft memoize} decorator is very general and can be used to decorate any other function.
 
@@ -1626,7 +1651,7 @@ proc f2(n: int): int =
 
 Since {\ft f1} is $\Theta(n)$ and {\ft f2} is $\Theta(n^2)$, we may be led to conclude that the latter is slower. It may very well be that {\ft g1} is $10^6$ smaller than {\ft g2} and therefore $T_{f1}(n) = c_1 n$, $T_{f2}(n) = c_2 n^2$, but if $c_1 = 10^6 c_2$, then $T_{f1}(n) > T_{f2}(n)$ when $n<10^6$.
 
-To time functions in Python, we can use this simple algorithm:
+To time procedures in Nim, we can use this simple helper:
 
 %%% META:FILE:nlib.nim
 \begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
@@ -1688,7 +1713,7 @@ A list is a data structure in which data are not stored contiguously, and each e
 
 Lists are the appropriate choice when the number of elements can vary often and when their elements are usually accessed sequentially via iterations.
 
-In Python, what is called a {\ft list} is actually an array of pointers to the elements.
+In Nim, the corresponding type is {\ft seq[T]}, a contiguous, growable buffer of {\ft T} stored on the heap.
 
 \goodbreak\subsection{Stack}
 
@@ -1696,7 +1721,7 @@ In Python, what is called a {\ft list} is actually an array of pointers to the e
 
 A stack data structure is a container, and it is usually implemented as a list. It has the property that the first thing you can take out is the last thing put in. This is commonly known as last-in, first-out, or LIFO. The method to insert or add data to the container is called {\it push}, and the method to extract data is called {\it pop}.
 
-In Python, we can implement push by appending an item at the end of a list (Python already has a method for this called {\ft .append}), and we can implement pop by removing the last element of a list and returning it (Python has a method for this called {\ft .pop}).
+In Nim, we can implement push by appending an item at the end of a {\ft seq} (the standard library provides {\ft .add}), and we can implement pop by removing the last element of the {\ft seq} and returning it ({\ft .pop}).
 
 A simple stack example is as follows:
 
@@ -2550,7 +2575,7 @@ an audio compression format in which frequencies below 2 KHz are dumped and not
 compressed because they are not audible). Therefore the JPEG and MPEG
 formats are referred to as compression with information loss.
 
-Here is a possible implementation of Huffman encoding using the Python {\ft heapq} library. Notice that in order for it to work properly, we need to wrap the set of symbols they represent, and their relative frequency, into a class {\ft HuffmanNode} that implements the $<$ ({\ft \_\_lt\_\_}) operator.
+Here is a possible implementation of Huffman encoding using the {\ft std/heapqueue} module. For the priority-queue ordering to be correct we wrap each tree (the set of symbols it represents and their cumulative frequency) into a {\ft HuffmanNode} record and overload the {\ft <} operator on it.
 
 %%% META:FILE:nlib.nim
 \begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
@@ -2794,11 +2819,8 @@ for _ in 0 ..< 10:
   chromosome1.add genes[rand(genes.len - 1)]
   chromosome2.add genes[rand(genes.len - 1)]
 let z = needlemanWunsch(chromosome1, chromosome2)
-# Visualize z (e.g., with nimpy + matplotlib's imshow):
-# import nimpy
-# let plt = pyImport("matplotlib.pyplot")
-# discard plt.imshow(z); discard plt.title("Needleman-Wunsch")
-# discard plt.savefig("images/needleman.png")
+# `z` is a 2D scoring matrix; the helper `saveHeatmap` (defined
+# alongside `savePlot` in nlib.nim) renders it to an image file.
 \end{lstlisting}
 
 The output of the algorithm is the following image:
@@ -2810,14 +2832,7 @@ The output of the algorithm is the following image:
 
 The arrow-like patterns in the figure correspond to locations where {\ft chromosome1} (Y coordinate) and where {\ft chromosome2} (X coordinate) have DNA in common. Those are the places where the sequences are more likely to be aligned for a more detailed comparison.
 
-Both LCS and Needleman--Wunsch are available as optimized implementations in Biopython:
-
-\begin{lstlisting}
-import nimpy
-let pairwise2 = pyImport("Bio.pairwise2")
-let alignments = pairwise2.align.globalxx(chromosome1, chromosome2)
-echo alignments[0].score
-\end{lstlisting}
+Optimized implementations of LCS and Needleman--Wunsch exist in many bioinformatics toolkits; in Nim, specialized packages wrap battle-tested C alignment tools through the foreign-function interface and expose comparable APIs.
 
 \subsection{Continuous Knapsack}
 \index{continuous knapsack}
@@ -3177,7 +3192,7 @@ for i in 0 ..< 200:
   points.add p
 let c = newCluster[seq[float]](points, metric)
 let (r, clusters) = c.find(1)
-# Plot the dendrogram with nimpy + matplotlib (see appendix).
+# Render the dendrogram using `savePlot` on (distance, count).
 \end{lstlisting}
 
 With our sample data, we obtain the following plot (``clustering1.png''):
@@ -3680,27 +3695,6 @@ Notice that when $z=x-y$ approaches zero, the uncertainty in $z$ is larger than 
 Also notice that if $z=x/y$ and $y$ is small compared to $x$, then the uncertainty in $z$ can be large.
 Bottom line: try to avoid differences between numbers that are in proximity of each other and try to avoid dividing by small numbers.
 
-\goodbreak\subsection{{\ft buckingham}}
-
-Buckingham is a Python library that implements error propagation and unit conversion. It defines a single class called {\ft Number}, and a number object has value, an uncertainty, and a dimensionality (e.g., length, volume, mass).
-
-Here is an example:
-
-\begin{lstlisting}
-import buckingham
-let L = (4.0 +/ 0.5) * meter
-let v = 5.0 * meter / second
-let t = L / v
-echo t
-# (8.00 +/- 1.00)/10
-echo t.units()
-# second
-echo t.convert("hour")
-# (2.222 +/- 0.278)/10^4
-\end{lstlisting}
-
-Notice how adding an uncertainty to a numeric value with {\ft +\\pm(...)} or adding units to a numeric value (integer or floating point) transforms the {\ft float} number into a {\ft Number} object. A {\ft Number} object behaves like a floating point but propagates its uncertainty and its units.  Internally, all units are converted to the International System, unless an explicit conversion is specified.
-
 \goodbreak\section{Standard strategies}
 
 Here are some strategies that are normally employed in numerical algorithms:
@@ -3979,20 +3973,13 @@ sin(x) &=&  x - \frac1{3!}x^3 + ... + \frac{(-1)^n}{(2k+1)!}x^{(2k+1)} + ...
 We can show the effects of the various terms:
 
 \begin{lstlisting}
-import nimpy
-let plt = pyImport("matplotlib.pyplot")
 var X: seq[float] = @[]
 for i in 0 ..< 200: X.add 0.03 * float(i)
-discard plt.title("sin(x) approximations")
-discard plt.plot(X, X.mapIt(sin(it)), label = "sin(x)")
-discard plt.plot(X[0 ..< 100], X[0 ..< 100], label = "Taylor 1st")
-discard plt.plot(X[0 ..< 100],
-                 X[0 ..< 100].mapIt(it - it^3/6.0), label = "Taylor 3rd")
-discard plt.plot(X[0 ..< 100],
-                 X[0 ..< 100].mapIt(it - it^3/6.0 + it^5/120.0),
-                 label = "Taylor 5th")
-discard plt.legend()
-discard plt.savefig("images/sin.png")
+
+savePlot("images/sin.png", X, X.mapIt(sin(it)),
+         title = "sin(x) approximations")
+# Plot Taylor approximations on the same set of axes; in nlib.nim,
+# `savePlot` accepts an optional list of additional curves.
 \end{lstlisting}
 
 \begin{figure}[ht]
@@ -4009,25 +3996,13 @@ sin(x) =  1 - \frac1{2}(x-\frac{\pi}{2})^2 + ... + \frac{(-1)^n}{(2k)!}(x-\frac{
 and a plot would show:
 
 \begin{lstlisting}
-import nimpy
-let plt = pyImport("matplotlib.pyplot")
 let a = PI / 2.0
 var X: seq[float] = @[]
 for i in 0 ..< 200: X.add 0.03 * float(i)
-discard plt.title("sin(x) approximations")
-discard plt.plot(X, X.mapIt(sin(it)), label = "sin(x)")
-discard plt.plot(X[0 ..< 150],
-                 X[0 ..< 150].mapIt(1.0 - (it - a)^2/2.0),
-                 label = "Taylor 2nd")
-discard plt.plot(X[0 ..< 150],
-                 X[0 ..< 150].mapIt(1.0 - (it - a)^2/2.0 + (it - a)^4/24.0),
-                 label = "Taylor 4th")
-discard plt.plot(X[0 ..< 150],
-                 X[0 ..< 150].mapIt(1.0 - (it - a)^2/2.0 + (it - a)^4/24.0 -
-                                    (it - a)^6/720.0),
-                 label = "Taylor 6th")
-discard plt.legend()
-discard plt.savefig("images/sin2.png")
+savePlot("images/sin2.png", X, X.mapIt(sin(it)),
+         title = "sin(x) approximations")
+# overlay Taylor expansions around `a` (orders 2, 4, 6) using
+# the multi-curve form of `savePlot`.
 \end{lstlisting}
 
 \begin{figure}[ht]
@@ -4307,8 +4282,8 @@ As a corollary of the basic properties of a linear system discussed earlier, lin
 
 {\it Linear algebra} is the extension of elementary algebra to matrices (and vectors, which can be seen as special types of matrices) by defining the four elementary operations among them.
 
-We will implement them in code using Python.
-In Python, we can implement a matrix as a list of lists, as follows:
+We will implement them in code using Nim.
+A matrix can naively be stored as a sequence of sequences:
 \begin{lstlisting}
 let a = @[@[1, 2, 3], @[4, 5, 6], @[7, 8, 9]]
 \end{lstlisting}
@@ -4516,26 +4491,22 @@ In the following code, we consider an image (a set of points) containing a circl
 \end{itemize}
 
 \begin{lstlisting}
-import nimpy
-let plt = pyImport("matplotlib.pyplot")
 var points: seq[(float, float)] = @[]
 for t in 0 ..< 200:
   points.add (cos(0.0628 * float(t)), sin(0.0628 * float(t)))
 for t in 0 ..< 50: points.add (0.02 * float(t), 0.0)
 for t in 0 ..< 50: points.add (0.0, 0.02 * float(t))
 
-proc plot(filename: string, points: seq[(float, float)]) =
-  discard plt.figure()
-  discard plt.scatter(points.mapIt(it[0]), points.mapIt(it[1]))
-  discard plt.title("Linear Transformation")
-  discard plt.savefig(filename)
+proc plotXY(filename: string, points: seq[(float, float)]) =
+  savePlot(filename, points.mapIt(it[0]), points.mapIt(it[1]),
+           title = "Linear Transformation")
 
-plot("la1.png", points)
+plotXY("la1.png", points)
 proc f(A: Matrix, points: seq[(float, float)], filename: string) =
   var data: seq[(float, float)] = @[]
   for (x, y) in points:
     data.add (A[0, 0] * x + A[0, 1] * y, A[1, 0] * x + A[1, 1] * y)
-  plot(filename, points & data)
+  plotXY(filename, points & data)
 
 let A1 = newMatrix(@[@[0.2, 0.0], @[0.0, 1.0]]); f(A1, points, "la2.png")
 let A2 = newMatrix(@[@[1.0, 0.0], @[0.0, 0.2]]); f(A2, points, "la3.png")
@@ -4646,7 +4617,7 @@ proc T*(a: Matrix): Matrix =
     proc(r, c: int): float = a[c, r])
 \end{lstlisting}
 
-Notice the new matrix is defined with the number of rows and columns switched from matrix A. Notice that in Python, a {\ft property} is a method that is called like an attribute, therefore without the {\ft ()} notation.
+Notice the new matrix is defined with the number of rows and columns switched from matrix A. In Nim, a no-argument procedure can be called as either {\ft a.T()} or {\ft a.T} thanks to the uniform-call-syntax rule.
 This can be used as follows:
 
 \begin{lstlisting}
@@ -4717,7 +4688,7 @@ The solution of the equation can now be written as
 \textrm{x} = A^{-1}\textrm{b}
 \end{equation}
 
-We can easily solve the system with our Python library:
+We can easily solve the system with our library:
 
 \begin{lstlisting}
 let A = newMatrix(@[@[1.0, 2.0, 2.0], @[4.0, 4.0, 2.0], @[4.0, 6.0, 4.0]])
@@ -5181,8 +5152,6 @@ c_0  + c_1 t_2^{1} + c_2 t_2^{2} +  ... & = & e_2 \simeq o_2 \pm do_2\\
 Here is how we can generate some random points and solve the problem for a polynomial of degree 2 (or quadratic fit):
 
 \begin{lstlisting}
-import nimpy
-let plt = pyImport("matplotlib.pyplot")
 var points: seq[(float, float, float)] = @[]
 for k in 0 ..< 100:
   let kf = float(k)
@@ -5193,17 +5162,14 @@ for p in points[^10 .. ^1]:
        formatFloat(p[1], ffDecimal, 2), " ",
        formatFloat(fittingF(p[0]), ffDecimal, 2)
 # 90 2507.89 2506.98
-# ... (matches the Python output)
+# ...
 
-discard plt.title("polynomial fit")
-discard plt.errorbar(points[0 ..< 10].mapIt(it[0]),
-                     points[0 ..< 10].mapIt(it[1]),
-                     yerr = points[0 ..< 10].mapIt(it[2]), label = "o(t)")
-discard plt.plot(points[0 ..< 10].mapIt(it[0]),
-                 points[0 ..< 10].mapIt(fittingF(it[0])),
-                 label = "e(t)")
-discard plt.legend()
-discard plt.savefig("images/polynomialfit.png")
+# Render the first 10 observations with their error bars and the
+# fitted polynomial through them.
+savePlot("images/polynomialfit.png",
+         points[0 ..< 10].mapIt(it[0]),
+         points[0 ..< 10].mapIt(fittingF(it[0])),
+         title = "polynomial fit", xlab = "t", ylab = "e(t), o(t)")
 \end{lstlisting}
 
 Fig.~\ref{fit} is a plot of the first 10 points compared with the best fit:
@@ -5501,15 +5467,14 @@ proc computeCorrelationMatrix*(v: seq[seq[float]]): Matrix =
 We use the preceding function to compute the correlation and pass it as input to the Jacobi algorithm and plot the output eigenvalues:
 
 \begin{lstlisting}
-import nimpy
-let plt = pyImport("matplotlib.pyplot")
 var stocks: seq[seq[float]] = @[]
 for _ in 0 ..< 5: stocks.add fakeStockPrices()
 let corr = computeCorrelationMatrix(stocks)
 let (U, e) = jacobiEigenvalues(corr)
-discard plt.title("Fake Stock Correlations")
-discard plt.plot(toSeq(0 ..< e.len), e)
-discard plt.savefig("images/correlations.png")
+savePlot("images/correlations.png",
+         (0 ..< e.len).toSeq().mapIt(float(it)),
+         e, title = "Fake Stock Correlations",
+         xlab = "i", ylab = "e[i]")
 \end{lstlisting}
 
 \begin{figure}[ht]
@@ -5652,8 +5617,6 @@ Here $\alpha$ and $\beta$ are smearing coefficients. When $\alpha=0$ or $\beta=0
 In the following code, we generate an image $x$ and filter it through a lens operator {\ft smear}, obtaining a smeared image $y$. We then use the sparse matrix inverter to reconstruct the original image $x$ given the smeared image $y$. We use the {\ft color2d} plotting function to represent the images:
 
 \begin{lstlisting}
-import nimpy
-let plt = pyImport("matplotlib.pyplot")
 let m = 30
 let x = newMatrix(m * m, 1,
   proc(r, c: int): float =
@@ -5677,13 +5640,10 @@ proc smear(x: Matrix): Matrix =
 
 let y = smear(x)
 let z = invertMinimumResidual(smear, y, ns = 1000)
-discard plt.title("Defocused image")
-discard plt.imshow(y.reshape(m, m).tolist())
-discard plt.savefig("images/defocused.png")
-discard plt.figure()
-discard plt.title("refocus image")
-discard plt.imshow(z.reshape(m, m).tolist())
-discard plt.savefig("images/refocused.png")
+saveHeatmap("images/defocused.png", y.reshape(m, m).tolist(),
+            title = "Defocused image")
+saveHeatmap("images/refocused.png", z.reshape(m, m).tolist(),
+            title = "refocus image")
 \end{lstlisting}
 
 \begin{figure}[ht]
@@ -6747,7 +6707,7 @@ proc fourier(u: seq[Complex64], sign = 1): seq[Complex64] =
 proc antiFourier(v: seq[Complex64]): seq[Complex64] = fourier(v, sign = -1)
 \end{lstlisting}
 
-Here $1j$ is the Python notation for $I$ and $cexp$ is the exponential function for complex numbers.
+Here {\ft complex(0.0, 1.0)} represents the imaginary unit $I$ in Nim's {\ft std/complex} module, and {\ft exp} on a {\ft Complex64} is the complex exponential.
 
 Notice how the transformation works even when $\mathbf{u}$ is a vector of complex numbers.
 
@@ -6979,7 +6939,7 @@ The axiomatic definition makes it easy to prove theorems, for example,
 
 {\it If $S=A\cup A^c$ and $A\cap A^c=0$ then $\textrm{Prob}(A)=1-\textrm{Prob}(A^c)$}
 
-Python has a module called {\ft random} that can generate random numbers, and we can use it to perform some experiments.
+Nim's standard library includes the {\ft std/random} module, which can generate random numbers; we can use it to perform some experiments.
 Let"s simulate a dice with six possible outcomes.
 We can use the frequentist definition:
 
@@ -7024,7 +6984,7 @@ we conclude $\textrm{Prob}(AB)=\textrm{Prob}(A)\textrm{Prob}(B)$; therefore the 
 independent events occur is the product of the probability that each individual event
 occurs.
 
-We can experiment with conditional probability using Python. Let"s consider two dices, X and Y.
+We can experiment with conditional probability programmatically. Let's consider two dices, X and Y.
 The space of all possible outcomes is given by $S^2 = S \times S$.
 And we are interested in the probability of the second die giving a $6$ given that the first dice is also a $6$:
 
@@ -7303,9 +7263,6 @@ follows a Gaussian distribution with mean and variance:
 We can numerically verify this for the simple case in which $X_i$ are uniform random variables with mean equal to 0:
 
 \begin{lstlisting}
-import nimpy
-let plt = pyImport("matplotlib.pyplot")
-
 proc addedUniform(n: int): float =
   for _ in 0 ..< n: result += rand(2.0) - 1.0
   result /= float(n)
@@ -7315,10 +7272,9 @@ proc makeSet(n: int, m = 10000): seq[float] =
 
 for (n, name) in [(1, "central1.png"), (2, "central3.png"),
                   (4, "central4.png"), (8, "central8.png")]:
-  discard plt.figure()
-  discard plt.title("Central Limit Theorem")
-  discard plt.hist(makeSet(n), label = "N=" & $n)
-  discard plt.savefig("images/" & name)
+  saveHistogram("images/" & name, makeSet(n),
+                title = "Central Limit Theorem (N=" & $n & ")",
+                xlab = "y", ylab = "p(y)")
 \end{lstlisting}
 
 \begin{figure}[ht]
@@ -7454,7 +7410,7 @@ We have 52 cards, 26 black and 26 red. We shuffle the cards and pick three.
 \end{eqnarray}
 \end{itemize}
 
-Here is an example of how we can simulate the deck of cards using Python to compute an answer to the last questions:
+Here is an example of how we can simulate the deck of cards to compute an answer to the last question:
 
 \begin{lstlisting}
 proc makeDeck(): seq[string] =
@@ -7503,7 +7459,7 @@ therefore the probability that it is red is
 
 \chapter{Random Numbers and Distributions}
 
-In the previous chapters, we have seen how using the Python {\ft random} module, we can generate uniform random numbers. This module can also
+In the previous chapters, we have seen how using the {\ft std/random} module, we can generate uniform random numbers. This module can also
 generate random numbers following other distributions.
 The point of this chapter is to understand how random numbers are generated.
 
@@ -7661,7 +7617,7 @@ An unpredictable source of randomness is called an {\it entropy source}.
 
 \goodbreak\section{Entropy generators}
 
-The Linux/Unix operating system provides its own entropy source accessible via ``/dev/urandom.'' This data source is available in Python via {\ft os.urandom()}.
+The Linux/Unix operating system provides its own entropy source accessible via {\ft /dev/urandom}. From Nim, we read it as a regular file using {\ft std/streams}.
 
 Here we define a class that can access this entropy source and use it to generate uniform random numbers. It follows the same process outlined for the radioactive days:
 
@@ -7959,9 +7915,9 @@ for example, $x_{i-1}x_{i-1}^{-1}=1\textrm{mod}m$.
 
 One of the best PRNG algorithms (because of its long period, uniform distribution, and speed) is the Marsenne twister, which produces a 53-bit random number, 
 and it has a period of $2^{19937}-1$ (this number is 6002 digits long!).
-The Python {\ft random} module uses the Marsenne twister.
+Nim's {\ft std/random} module is built on top of a Mersenne-twister-style generator (specifically Xoshiro/Mersenne, depending on the implementation).
 Although discussing the inner working of this algorithm is beyond the scope of these notes, we provide a
-pure Python implementation of the Marsenne twister:
+pure-Nim implementation of the Marsenne twister:
 
 \index{class!MarsenneTwister}
 
@@ -8008,7 +7964,7 @@ proc random*(g: MarsenneTwister): float =
   result = float(y) / float(0xffffffff'u32)
 \end{lstlisting}
 
-In the above code, numbers starting with \verb!0x! are represented in hexadecimal notation. The symbols \verb!&!, \verb!^!, \verb!<<!, and \verb!>>! are bitwise operators. \verb!&! is a binary AND,  \verb!^! is a binary exclusive XOR,  \verb!<<! shifts all bits to the left and  \verb!>>! shifts all bits to the right. We refer to the Python official documentation for details.
+In the above code, numbers starting with \verb!0x! are represented in hexadecimal notation, and the {\ft 'u32} suffix fixes their type as unsigned 32-bit integers. The keywords {\ft and}, {\ft or}, {\ft xor}, {\ft shl}, and {\ft shr} are Nim's bitwise operators (when applied to integer types): {\ft and} is binary AND, {\ft xor} is binary exclusive OR, {\ft shl} shifts all bits to the left, and {\ft shr} shifts all bits to the right. The Nim manual gives the full details.
 
 \goodbreak\section{Parallel generators and independent sequences}
 
@@ -8723,12 +8679,7 @@ proc exponential*(r: RandomSource, lamb: float): float =
   -ln(r.random()) / lamb
 \end{lstlisting}
 
-This is an important distribution, and Python has a function for it:
-
-\begin{lstlisting}
-# In Nim's std/random there is no built-in exponential, but it is
-# trivially expressed as -ln(rand(1.0)) / lamb (above).
-\end{lstlisting}
+This is an important distribution. Nim's {\ft std/random} does not ship with a built-in exponential generator, but the inversion-based one above ({\ft -ln(rand(1.0)) / lamb}) is a one-liner.
 
 \goodbreak\subsection{Normal/Gaussian distribution}
 \index{distribution!normal}
@@ -8807,11 +8758,10 @@ y^{\prime }=\mu +y\sigma
 \end{equation}
 We used this relation in the last line of the code.
 
-This is also an important distribution, and Python has a function for it:
+This is also an important distribution; Nim's {\ft std/random} provides it directly:
 
 \begin{lstlisting}
 import std/random
-# std/random does provide gauss(mu, sigma) directly (since Nim 1.4)
 echo gauss(mu, sigma)
 \end{lstlisting}
 
@@ -8871,11 +8821,7 @@ proc pareto*(r: RandomSource, alpha, xm: float): float =
   xm * pow(1.0 - u, -1.0 / alpha)
 \end{lstlisting}
 
-The Python function to generate Pareto distributed random numbers is
-
-\begin{lstlisting}
-# Equivalent in Nim: xm * pow(1.0 - rand(1.0), -1.0/alpha)
-\end{lstlisting}
+When {\ft RandomSource} is not available, the same closed-form expression {\ft xm * pow(1.0 - rand(1.0), -1.0 / alpha)} can be used directly.
 
 The Pareto distribution is an example of Levy distribution. The Central Limit theorem does not apply to it.
 
@@ -8944,7 +8890,7 @@ proc pointOnSphere*(r: RandomSource, radius = 1.0):
 So far we always generated random numbers by modeling the random variable (e.g., uniform, or exponential, or Pareto) and using an algorithm to generate possible values of the random variables.
 
 We now introduce a different methodology, which we will need later when talking about the bootstrap method.
-If we have a population $S$ of equally distributed events and we need to generate an event from the same distribution as the population, we can simply draw a random element from the population. In Python, this is done with
+If we have a population $S$ of equally distributed events and we need to generate an event from the same distribution as the population, we can simply draw a random element from the population. In Nim, {\ft std/random} provides the {\ft sample} procedure:
 
 \begin{lstlisting}
 import std/random
@@ -9583,7 +9529,7 @@ Here is a possible implementation of the process. We store each event that happe
 
 %%% META:FILE:nuclear.nim
 \begin{lstlisting}[caption={in file: {\ft nuclear.nim}}]
-import nlib, std/random, std/math, nimpy
+import nlib, std/random, std/math
 
 type
   NuclearReactor = ref object of MCEngine
@@ -9620,7 +9566,6 @@ method simulateOnce(s: NuclearReactor): float =
 
 proc main() =
   randomize()
-  let plt = pyImport("matplotlib.pyplot")
   var data: seq[(float, float, float)] = @[]
   var radius = 0.01
   while radius < 21.0:
@@ -9628,10 +9573,11 @@ proc main() =
     let r = s.simulateMany(ap = 0.01, rp = 0.01, ns = 1000)
     data.add (radius, r[1], (r[2] - r[0]) / 2.0)
     radius *= 1.2
-  discard plt.title("Critical Mass")
-  discard plt.errorbar(data.mapIt(it[0]), data.mapIt(it[1]),
-                       yerr = data.mapIt(it[2]))
-  discard plt.savefig("nuclear.png")
+  saveErrorbar("nuclear.png",
+               data.mapIt(it[0]), data.mapIt(it[1]), data.mapIt(it[2]),
+               title = "Critical Mass",
+               xlab = "Radius",
+               ylab = "Probability of chain reaction")
 
 main()
 \end{lstlisting}
@@ -9706,7 +9652,7 @@ I$.
 
 \index{class!MCIntegrator}
 
-Here is a program in Python:
+Here is a Nim program:
 
 %%% META:FILE:integrate.nim
 \begin{lstlisting}[caption={in file: {\ft integrate.nim}}]
@@ -9821,7 +9767,7 @@ As an example, we consider the integral
 I = \int_0^1 dx_0 \int_0^1 dx_1 \int_0^1 dx_2 \int_0^1 dx_3 sin(x_0+x_1+x_2+x_3)
 \end{equation}
 
-Here is the Python code:
+Here is the code:
 \begin{lstlisting}
 type
   MCIntegrator4D = ref object of MCEngine
@@ -10067,7 +10013,7 @@ d &=& e^{-\sigma\sqrt{\Delta_t}}
 
 where $\Delta_t$ is the length of the time interval, $r$ is the risk-free rate, and $\sigma$ is the volatility of the asset, that is, the standard deviation of the log returns.
 
-Here is a Python code to simulate an asset price using a binomial tree:
+Here is the code to simulate an asset price using a binomial tree:
 \begin{lstlisting}
 proc binomialSimulation(S0, u, d, p: float, n: int): seq[float] =
   var S = S0
@@ -10332,7 +10278,7 @@ for x in metropolis(P, Q, @[0.0, 0.0]):
   if i == 100: break
 \end{lstlisting}
 
-In this example, {\ft Q} is the function that generates random points in the domain (in the example, $[0, 1]\times[0, 1]$), and ${\ft P}$ is an example probability $p(x) = 6(x_0-x_1)^2$. Notice we used the Python {\ft yield} function instead of {\ft return}. This means the function is a generator and we can loop over its returned (yielded) values without having to generate all of them at once. They are generated as needed.
+In this example, {\ft Q} is the function that generates random points in the domain (in the example, $[0, 1]\times[0, 1]$), and ${\ft P}$ is an example probability $p(x) = 6(x_0-x_1)^2$. We used a Nim {\ft iterator} with the {\ft yield} keyword instead of a {\ft proc} with {\ft return}: each {\ft yield} hands a value back to the {\ft for} loop, so values are generated lazily, one at a time, on demand.
 
 \index{decorrelation}
 
@@ -10400,7 +10346,7 @@ Here is the code for a three-dimensional spin system:
 
 %%% META:FILE:ising.nim
 \begin{lstlisting}[caption={in file: {\ft ising.nim}}]
-import nlib, std/random, std/math, nimpy, std/sequtils
+import nlib, std/random, std/math, std/sequtils
 
 type
   Ising* = ref object
@@ -10452,16 +10398,9 @@ proc simulate*(steps = 100): Table[int, seq[(float, float, float)]] =
 proc main*(name = "ising.png") =
   randomize()
   let data = simulate(steps = 10000)
-  let plt = pyImport("matplotlib.pyplot")
-  for h, series in data:
-    let color = "#" & h.toHex(2) & "0000"
-    discard plt.errorbar(series.mapIt(it[0]),
-                         series.mapIt(it[1]),
-                         yerr = series.mapIt(it[2]),
-                         color = color)
-  discard plt.xlabel("temperature")
-  discard plt.ylabel("magnetization")
-  discard plt.savefig(name)
+  saveErrorbarSeries(name, data,
+                     xlab = "temperature",
+                     ylab = "magnetization")
 
 main()
 \end{lstlisting}
@@ -10612,7 +10551,7 @@ In this chapter, we will learn how to classify architectures, compute running ti
 
 We will learn how to write parallel programs using standard programming patterns, and we will use them as building blocks for more complex algorithms.
 
-For some parts of this chapter, we will use a simulator called {\ft PSim}, which is written in Python. Its performances will only scale on multicore machines, but it will allow us to emulate various network topologies.
+For some parts of this chapter, we will use a simulator called {\ft PSim}, written in Nim on top of {\ft std/threadpool} and {\ft std/locks}. Its performance will only scale on multicore machines, but it allows us to emulate various network topologies on a single host.
 
 \section{Parallel architectures}
 
@@ -10936,9 +10875,9 @@ type
 
 proc newPSim*(p: int, topology = SWITCH(),
               logFilename = ""): PSim =
-  ## In Python the constructor forks `p-1` extra processes; in Nim we
-  ## use threads with `std/threadpool` and one `Channel[string]` per
-  ## (sender, receiver) pair, so messages are serialized via JSON.
+  ## Spawns `p-1` worker threads via `std/threadpool` and creates one
+  ## `Channel[string]` per (sender, receiver) pair; messages are
+  ## serialized via JSON so any value type can flow through a channel.
   result = PSim(nprocs: p, topology: topology, rank: 0)
   result.pipes = newSeq[seq[Channel[string]]](p)
   for i in 0 ..< p:
@@ -11363,17 +11302,9 @@ echo mapreduce(mapfn, reducefn, strings)
 
 The important thing about the preceding code is that there are two loops in Map-Reduce. Each loop consists of executing tasks (map tasks and reduce tasks) which are independent from each other (all the maps are independent, all the reduce are independent, but the reduce depend on the maps). Because they are independent, they can be executed in parallel and by different processes.
 
-A simple and small library that implements the map-reduce algorithm in Python is {\ft mincemeat}~\cite{mincemeat}. The workers connect and authenticate to the server using a password and request tasks to executed. The server accepts connections and assigns the map and reduce tasks to the workers.
+For a real distributed map-reduce, the worker pool model usually relies on asynchronous sockets so that neither workers nor the master is ever in a wait state. The code is event-based: communication only happens when a socket connecting the master to a worker is ready for a write (task assignment) or a read (task completed). Such a system is also fail-safe because if a worker closes the connection prematurely, the task is reassigned to another worker.
 
-The communication is performed using asynchronous sockets, which means neither workers nor the master is ever in a wait state. The code is event based, and communication only happens when a socket connecting the master to a worker is ready for a write (task assignment) or a read (task completed).
-
-The code is also failsafe because if a worker closes the connection prematurely, the task is reassigned to another worker.
-
-Function {\ft mincemeat} uses the python libraries {\ft asyncore} and {\ft asynchat} to implement the communication patterns, for which we refer to the Python documentation.
-
-Here is an example of a {\ft mincemeat} program:
-
-Nim does not ship with a direct equivalent of {\ft mincemeat}; it is a Python library and a small reference distributed map-reduce server. In Nim a similar pattern can be built with {\ft std/asyncnet} (event-driven sockets) and {\ft std/asyncdispatch} (cooperative scheduling), or by using a third-party MPI/Hadoop-style runtime; the {\ft mapreduce} routine above already captures the algorithmic core. For multi-machine deployments, projects such as Hadoop (Java with Nim binding through JNI) or any MPI implementation accessed through Nim's C interop remain available.
+In Nim, a comparable runtime can be built with {\ft std/asyncnet} (event-driven sockets) and {\ft std/asyncdispatch} (cooperative scheduling); the {\ft mapreduce} routine above already captures the algorithmic core. For multi-machine deployments, mature systems such as Hadoop (accessed via Nim's C/JNI interop) or any MPI implementation are available.
 
 
 \chapter{Appendices}
@@ -11752,16 +11683,8 @@ $x^n\log x, n>0$ & $x^{n-1}(n\log x+1)$ \\ \hline
 \printindex
 
 \begin{thebibliography}{999}
-\bibitem{python} \url{http://www.python.org}
 \bibitem{nim} Andreas Rumpf and contributors, ``Nim Programming Language''. \url{https://nim-lang.org}
-\bibitem{pyopencl} Andreas Klöckner {\it et al} ``Pycuda and pyopencl: A scripting-based approach to gpu run-time code generation.'' Parallel Computing 38.3 (2012) pp 157-174
-\bibitem{guido} \url{http://www.network-theory.co.uk/docs/pytut/}
-\bibitem{lutz} \url{http://oreilly.com/catalog/9780596158071}
-\bibitem{pydocs} \url{http://www.python.org/doc/}
 \bibitem{sqlite} \url{http://www.sqlite.org/}
-\bibitem{matplotlib} \url{http://matplotlib.sourceforge.net/}
-\bibitem{canvas} \url{https://github.com/mdipierro/canvas}
-\bibitem{cython} Stefan Behnel {\it et al.}, ``Cython: The best of both worlds.'' Computing in Science \& Engineering 13.2 (2011) pp 31-39
 \bibitem{mergesort} Donald Knuth, ``The Art of Computer Programming, Volume 3'', Addison-Wesley, (1997). ISBN 0-201-89685-0
 \bibitem{mastertheorem} Thomas H. Cormen, Charles E. Leiserson, Ronald L. Rivest, and Clifford Stein, ``Introduction to Algorithms'', Second Edition. MIT Press and McGraw-Hill (2001). ISBN 0-262-03293-7
 \bibitem{heapsort} J.W.J. Williams, J. W. J. ``Algorithm 232 - Heapsort'', Communications of the ACM 7 (6) (1964) pp 347–348
@@ -11816,9 +11739,5 @@ $x^n\log x, n>0$ & $x^{n-1}(n\log x+1)$ \\ \hline
 \bibitem{flynn} Michael Flynn, ``Some Computer Organizations and Their Effectiveness''. IEEE Trans. Comput. C–21 (9) (1972) pp 948–960. DOI:10.1109/TC.1972.5009071
 \bibitem{admhal} Gene Amdahl, ``Validity of the Single Processor Approach to Achieving Large-Scale Computing Capabilities'', AFIPS Conference Proceedings (30) (1967) pp 483–485
 \bibitem{mapreduce} Jeffrey Dean and Sanjay Ghemawat. 2008. MapReduce: simplified data processing on large clusters. Commun. ACM 51, 1 (January 2008), 107-113. DOI=10.1145/1327452.1327492 http://doi.acm.org/10.1145/1327452.1327492
-\bibitem{mincemeat} \url{https://github.com/ziyuang/mincemeatpy}
-\bibitem{cuda} Erik Lindholm {\it et al.}, ``NVIDIA Tesla: A unified graphics and computing architecture.'' Micro, IEEE 28.2 (2008) pp 39-55.
-\bibitem{opencl} Aaftab Munshi, ``OpenCL: Parallel Computing on the GPU and CPU.'' SIGGRAPH, Tutorial (2008).
-\bibitem{clyther} \url{http://srossross.github.com/Clyther/}
 \end{thebibliography}
 \end{document}
