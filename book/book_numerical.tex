@@ -9,7 +9,7 @@
 % - dimensional analysis
 
 \title{\LARGE Annotated Algorithms in Nim\\[0.5em]
-       \large With Applications in Physics, Biology, Finance (3rd Ed.)}
+       \large With Applications in Physics, Biology, Finance}
 
 \author{Massimo Di Pierro}
 \publisher{Experts4Solutions}
@@ -146,15 +146,11 @@ For more information about appropriate use of this material, contact:
 
 \begin{verbatim}
 Massimo Di Pierro
-School of Computing
-DePaul University
-243 S Wabash Ave
-Chicago, IL 60604 (USA)
 Email: massimo.dipierro@gmail.com
 \end{verbatim}
 
 Library of Congress Cataloging-in-Publication Data: \\ \\
-ISBN: 9798254871569 \\
+ISBN: ISBN-XXXX \\
 Build Date: \today
 }
 
@@ -182,7 +178,9 @@ Build Date: \today
 
 \goodbreak\chapter{Introduction}
 
-This book is assembled from lectures given by the author over a period of 10 years at the School of Computing of DePaul University. The lectures cover multiple classes, including Analysis and Design of Algorithms, Scientific Computing, Monte Carlo Simulations, and Parallel Algorithms. These lectures teach the core knowledge required by any scientist interested in numerical algorithms and by students interested in computational finance.
+This is a port to Nim of a previous edition of this book from the same author. The original version of this book was in Python and was assembled from lectures given by the author over a period of 10 years at the School of Computing of DePaul University. The lectures cover multiple classes, including Analysis and Design of Algorithms, Scientific Computing, Monte Carlo Simulations, and Parallel Algorithms. These lectures teach the core knowledge required by any scientist interested in numerical algorithms and by students interested in computational finance.
+
+Over time the author has started to appreciate and love the syntax of Nim, its build speed, and its running speed, and it seemed a good language for the development of scientific applications that does not compromise on performance.
 
 The notes are not comprehensive, yet they try to identify and describe the most important concepts taught in those courses using a few common tools and unified notation.
 
@@ -298,7 +296,7 @@ Three properties of Nim shape the code in this book:
 \item Procedures, methods, iterators, and operators are all separately overloadable. The {\ft *} suffix marks a name as exported from a module.
 \end{itemize}
 
-Nim is interoperable with other ecosystems: through {\ft db\_sqlite} it talks to SQLite~\cite{sqlite} for persistence, and the C FFI gives it access to libraries such as BLAS or FFTW. For occasional needs that fall outside the standard library (e.g., plotting), we drive an external graphical toolkit through Nim's foreign-function bindings rather than re-implementing it.
+Nim is interoperable with other ecosystems: an external {\ft db\_sqlite} package binds it to SQLite~\cite{sqlite} for persistence, and the C FFI gives access to libraries such as BLAS or FFTW. For occasional needs that fall outside the standard library (e.g., plotting), we drive an external graphical toolkit through Nim's foreign-function bindings rather than re-implementing it.
 
 You can find tutorials, the language manual, and the standard library reference on the official Nim website.
 
@@ -763,7 +761,7 @@ The standard library lives under the {\ft std/} prefix. The modules used in the 
 {\ft std/heapqueue}   & min-heap priority queue \\ \hline
 {\ft std/deques}      & double-ended queue \\ \hline
 {\ft std/json}        & JSON parsing and generation \\ \hline
-{\ft std/db\_sqlite}  & SQLite client \\ \hline
+{\ft std/os}          & file-system path manipulation, environment \\ \hline
 {\ft std/times}       & {\ft epochTime}, {\ft now} \\ \hline
 {\ft std/threadpool}  & {\ft spawn}, {\ft sync}, {\ft Channel} \\ \hline
 \end{tabular}
@@ -802,52 +800,63 @@ let content = readFile("hello.txt")
 echo content
 \end{lstlisting}
 
-\goodbreak\subsection{A persistent dictionary on top of SQLite}
+\goodbreak\subsection{A persistent dictionary backed by JSON}
 
-Several examples in later chapters use a dictionary that survives between program runs. We can build a minimal one on top of {\ft std/db\_sqlite}: each key/value is a row in a table, with values serialized as JSON.
+Several examples in later chapters use a dictionary that survives between program runs. The implementation below keeps the entire mapping as a JSON file on disk: it has no external dependencies and is enough for the memoization and cached-stock-data use cases.
 
 \index{class!PersistentDictionary}
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
-import std/[db_sqlite, json]
+%%% META:FILE:nlib/persistent.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/persistent.nim}}]
+import std/[json, os, tables]
 
 type
   PersistentDictionary* = ref object
-    db*: DbConn
+    path*: string
+    cache*: Table[string, JsonNode]
+
+proc load(p: PersistentDictionary) =
+  if fileExists(p.path):
+    let raw = readFile(p.path)
+    if raw.len > 0:
+      let root = parseJson(raw)
+      for k, v in root:
+        p.cache[k] = v
+
+proc save(p: PersistentDictionary) =
+  var root = newJObject()
+  for k, v in p.cache:
+    root[k] = v
+  writeFile(p.path, $root)
 
 proc newPersistentDictionary*(path: string): PersistentDictionary =
-  result = PersistentDictionary(db: open(path, "", "", ""))
-  result.db.exec(sql"""
-    CREATE TABLE IF NOT EXISTS storage (
-      key   TEXT PRIMARY KEY,
-      value TEXT
-    )""")
+  result = PersistentDictionary(path: path,
+                                cache: initTable[string, JsonNode]())
+  load(result)
+
+proc close*(p: PersistentDictionary) =
+  save(p)
 
 proc `[]=`*(p: PersistentDictionary, key: string, value: JsonNode) =
-  p.db.exec(sql"INSERT OR REPLACE INTO storage VALUES (?, ?)",
-            key, $value)
+  p.cache[key] = value
+  save(p)
 
 proc `[]`*(p: PersistentDictionary, key: string): JsonNode =
-  let row = p.db.getRow(
-              sql"SELECT value FROM storage WHERE key = ?", key)
-  if row[0].len == 0: nil else: parseJson(row[0])
+  if key in p.cache: p.cache[key] else: nil
 
 proc contains*(p: PersistentDictionary, key: string): bool =
-  let row = p.db.getRow(
-              sql"SELECT 1 FROM storage WHERE key = ?", key)
-  row[0].len > 0
+  key in p.cache
 \end{lstlisting}
 
 Usage:
 
 \begin{lstlisting}
-let storage = newPersistentDictionary("memo.sqlite")
+let storage = newPersistentDictionary("memo.json")
 storage["pi"] = %3.141592653589793
 echo storage["pi"].getFloat
 \end{lstlisting}
 
-The {\ft \%} prefix and {\ft \%*} macro from {\ft std/json} convert any Nim value to a {\ft JsonNode}; {\ft .getFloat}, {\ft .getStr}, {\ft .getInt}, etc., extract the typed payload back. Together they give us a key-value store usable from any chapter that needs cross-run state (e.g., the memoization examples in chapter 3 and the stock-data examples in chapter 4).
+The {\ft \%} prefix and {\ft \%*} macro from {\ft std/json} convert any Nim value to a {\ft JsonNode}; {\ft .getFloat}, {\ft .getStr}, {\ft .getInt}, etc., extract the typed payload back. Together they give us a key-value store usable from any chapter that needs cross-run state (e.g., the memoization examples in chapter 3 and the stock-data examples in chapter 4). Swapping the backend for SQLite is a localized change once a maintained {\ft db\_sqlite} package is added to the project.
 
 \goodbreak\section{Plotting}
 
@@ -857,8 +866,8 @@ Plotting is a peripheral concern for this book: the algorithms are independent o
 
 A small helper, used throughout the book, writes a sequence of $(x, y)$ pairs to a file and invokes {\ft gnuplot}:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/plotting.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/plotting.nim}}]
 import std/[strutils, osproc]
 
 proc savePlot*(filename: string, xs, ys: openArray[float],
@@ -884,13 +893,19 @@ Most plotting calls in the book funnel through {\ft savePlot} or its variants fo
 
 \goodbreak\section{Putting it together}
 
-The remaining chapters build a single library, {\ft nlib.nim}, by accumulating procedures, types, and methods following the patterns introduced in this chapter. Listings tagged
+The remaining chapters build a small Nim package, {\ft nlib}, organized as one umbrella module {\ft nlib.nim} that re-exports a handful of focused submodules under {\ft nlib/} (e.g. {\ft nlib/sorting.nim}, {\ft nlib/matrix.nim}, {\ft nlib/randomgen.nim}, ...). Listings tagged
 
 \begin{quote}
-{\ft \textbackslash begin\{lstlisting\}[caption=\{in file: \{\textbackslash ft nlib.nim\}\}]}
+{\ft \textbackslash begin\{lstlisting\}[caption=\{in file: \{\textbackslash ft nlib/$\langle$module$\rangle$.nim\}\}]}
 \end{quote}
 
-are appended to {\ft nlib.nim}; other listings live in their own files (named in the caption) or are inline examples meant to be typed at the REPL or compiled into a small program. To run an example, save it to a file and compile with
+belong to the named submodule; other listings live in their own files (named in the caption) or are inline examples meant to be typed at the REPL or compiled into a small program. A consumer of the library only needs
+
+\begin{lstlisting}
+import nlib
+\end{lstlisting}
+
+to pull in the whole API at once. To run an example, save it to a file and compile with
 
 \begin{lstlisting}
 nim c -d:release --threads:on example.nim
@@ -1563,8 +1578,8 @@ The recurrence relation for this algorithm is $T(n)=T(n-1)+T(n-2)+1$, and its so
 \index{class!Memoize}
 
 We can write a generic {\ft memoize} higher-order procedure that takes a recursive function (which receives the memoized closure as its first argument so it can recurse) and returns a cached version:
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/memoize.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/memoize.nim}}]
 import std/tables
 
 proc memoize*[K, V](f: proc(self: proc(x: K): V, x: K): V):
@@ -1579,8 +1594,7 @@ proc memoize*[K, V](f: proc(self: proc(x: K): V, x: K): V):
 
 and applying it to the recursive function as follows:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+\begin{lstlisting}
 let fib = memoize[int, int](
   proc(self: proc(x: int): int, n: int): int =
     if n < 2: n else: self(n-1) + self(n-2))
@@ -1588,8 +1602,7 @@ let fib = memoize[int, int](
 
 which we can call as
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+\begin{lstlisting}
 echo fib(11)
 # 89
 \end{lstlisting}
@@ -1617,10 +1630,10 @@ This also makes the algorithm linear and $T(n) \in \Theta(n)$.
 
 Notice that we easily modify the memoization algorithm to store the partial results in a shared space, for example, on disk using the {\ft PersistentDictionary}:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/memoize.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/memoize.nim}}]
 proc memoizePersistent*[K, V](f: proc(self: proc(x: K): V, x: K): V,
-                              path = "memoize.sqlite"):
+                              path = "memoize.json"):
                               proc(x: K): V =
   let storage = newPersistentDictionary(path)
   proc memoized(x: K): V =
@@ -1632,7 +1645,7 @@ proc memoizePersistent*[K, V](f: proc(self: proc(x: K): V, x: K): V,
   return memoized
 \end{lstlisting}
 
-We can use it as we did before, but we can now start and stop the program or run concurrent parallel programs, and as long as they have access to the ``memoize.sqlite'' file, they will share the cache.
+We can use it as we did before, but we can now start and stop the program, and as long as it has access to the ``memoize.json'' file, the cache will persist across runs.
 
 
 \goodbreak\section{Timing algorithms}
@@ -1653,8 +1666,8 @@ Since {\ft f1} is $\Theta(n)$ and {\ft f2} is $\Theta(n^2)$, we may be led to co
 
 To time procedures in Nim, we can use this simple helper:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/timer.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/timer.nim}}]
 import std/times
 
 proc timef*(f: proc(), ns = 1000, dt = 60.0): float =
@@ -2180,8 +2193,8 @@ The algorithm starts by building a table of neighbors so that for each vertex, i
 
 Here is the algorithm:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/graph.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/graph.nim}}]
 proc breadthFirstSearch*[V](
     graph: tuple[vertices: seq[V], links: seq[(int, int)]],
     start: int): seq[int] =
@@ -2217,8 +2230,8 @@ In the cities analogy, if the BFS was exploring cities in the neighborhood befor
 
 Here is a possible implementation:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/graph.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/graph.nim}}]
 proc depthFirstSearch*[V](
     graph: tuple[vertices: seq[V], links: seq[(int, int)]],
     start: int): seq[int] =
@@ -2257,8 +2270,8 @@ Here is the implementation:
 
 \index{class!DisjointSets}
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/graph.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/graph.nim}}]
 type
   DisjointSets* = ref object
     sets*: seq[int]
@@ -2297,8 +2310,8 @@ As an example of application, here is a code that builds a $n^d$ maze. It may be
 It puts all the cells into a {\ft DisjointSets} data structure and then keeps tearing down walls at random. Two cells on the maze belong to the same set if they are connected, for example, if there is a path that connects them. At the beginning, each cell is its own set because it is isolated by walls.
 Walls are torn down by being removed from the list {\ft wall} if the wall was separating two disjoint sets of cells. Walls are torn down until all cells belong to the same set, for example, there is a path connecting any cell to any cell:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/graph.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/graph.nim}}]
 proc makeMaze*(n, d: int): tuple[walls, tornDownWalls: seq[(int, int)]] =
   var walls: seq[(int, int)] = @[]
   let total = n ^ d
@@ -2347,8 +2360,8 @@ Given a connected graph with weighted links (links with a weight or length), a {
 
 One algorithm to build the minimal spanning tree of a graph is the Kruskal~\cite{kruskal} algorithm. It works by placing all vertices in a {\ft DisjointSets} structure and looping over links in order of their weight. If the link connects two vertices belonging to different sets, the link is selected to be part of the minimum spanning tree, and the two sets are joined, else the link is ignored. The Kruskal algorithm assumes an undirected graph, for example, all links are bidirectional, and the weight of a link is the same in both directions:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/graph.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/graph.nim}}]
 import std/algorithm
 
 proc kruskal*[V](
@@ -2378,8 +2391,8 @@ The Prim~\cite{prim} algorithm solves the same problem as the Kruskal algorithm,
 
 The Prim algorithm also differs from the Kruskal algorithm because the former needs a starting vertex, whereas the latter does not. The result when interpreted as a subgraph does not depend on the starting vertex:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/graph.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/graph.nim}}]
 const PRIM_INFINITY* = 1e100
 
 type
@@ -2461,8 +2474,8 @@ It works, like Prim, by placing all vertices in a min priority queue where the q
 
 The implementation of this algorithm is almost identical to the Prim algorithm, except for two lines:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/graph.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/graph.nim}}]
 proc dijkstra*[V](
     graph: tuple[vertices: seq[V], links: seq[(int, int, float)]],
     start: int): seq[(int, int, float)] =
@@ -2577,8 +2590,8 @@ formats are referred to as compression with information loss.
 
 Here is a possible implementation of Huffman encoding using the {\ft std/heapqueue} module. For the priority-queue ordering to be correct we wrap each tree (the set of symbols it represents and their cumulative frequency) into a {\ft HuffmanNode} record and overload the {\ft <} operator on it.
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/compression.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/compression.nim}}]
 import std/heapqueue
 
 type
@@ -2742,8 +2755,8 @@ subproblem gives the correct solution by solving both and taking the max of
 the resulting subsequence lengths. Once we turn this into a dynamic
 programming algorithm, we get the following:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/text.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/text.nim}}]
 proc lcs*(a, b: string): int =
   var previous = newSeq[int](b.len)
   var current = newSeq[int](b.len)
@@ -2786,8 +2799,8 @@ echo lcs(a, b)
 With some minor changes to the LCS algorithm, we obtain the Needleman--Wunsch algorithm~\cite{needleman}, which solves the problem of {\it global sequence alignment}. The changes are that, instead of using only two alternating rows ({\ft c} and {\ft d} for storing the temporary results, we store all temporary results in an array {\ft z}; when two matching symbols are found and they are not consecutive, we apply a penalty equal to $p^m$, where $m$ is the distance between the two matches and is also the size of the gap in the matching subsequence:
 
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/text.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/text.nim}}]
 proc needlemanWunsch*(a, b: string, p = 0.97): seq[seq[float]] =
   var z: seq[seq[float]] = @[]
   for i, r in a:
@@ -2867,8 +2880,8 @@ Using financial terms, we can say that
 
 Here is the solving algorithm:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/finance.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/finance.nim}}]
 proc continuumKnapsack*(a, b: seq[float], c: float):
                        (float, seq[(int, float)]) =
   var table: seq[(float, int)] = @[]
@@ -3092,8 +3105,8 @@ At each point in time, each cluster is represented by one element, which can be 
 
 \index{class!Cluster}
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/cluster.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/cluster.nim}}]
 type
   ClusterEntry = object
     case isList: bool
@@ -3156,13 +3169,13 @@ proc step*[T](c: Cluster[T]): (float, seq[seq[int]]) =
         oldD[h] = (a + c.w[h] * r, b + c.w[h])
       else:
         newD.add (r, h, k)
-    for k, ab in oldD:
+    for k, ab in tables.pairs(oldD):
       newD.add (ab[0] / ab[1], pi, k)
     newD.sort()
     c.d = newD
     c.w[pi] = c.w[pi] + c.w[pj]
     var v: seq[seq[int]] = @[]
-    for _, e in c.q:
+    for _, e in tables.pairs(c.q):
       if e.isList: v.add e.members
     c.v = v
     c.dd.add (c.r, c.v.len)
@@ -3231,8 +3244,8 @@ The network is trained by providing an input and adjusting the characteristics $
 
 \index{class!NeuralNetwork}
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/neural.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/neural.nim}}]
 type
   NeuralNetwork* = ref object
     ni*, nh*, no*: int
@@ -3351,7 +3364,7 @@ n.test(pat)
 Now, we use our neural network to learn patterns in stock prices and predict the next day return. We then check what it has learned, comparing the sign of the prediction with the sign of the actual return for the same days used to train the network:
 %%% META:FILE:test.nim
 \begin{lstlisting}[caption={in file: {\ft test.nim}}]
-let storage = newPersistentDictionary("sp100.sqlite")
+let storage = newPersistentDictionary("sp100.json")
 var v: seq[float] = @[]
 for day in storage["AAPL/2011"][1 .. ^1]:
   v.add day["arithmetic_return"].getFloat * 300.0
@@ -3770,8 +3783,8 @@ Notice that even more definitions are possible as long as they agree in the limi
 
 We can easily implement the concept of a numerical derivative in code by creating a {\it functional} $D$ that takes a function $f$ and returns the function $\frac{\textrm{d}f(x)}{\textrm{d}x}$ (a functional is a function that returns another function):
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/calculus.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/calculus.nim}}]
 proc D*(f: proc(x: float): float, h = 1e-6): proc(x: float): float =
   result = proc(x: float): float = (f(x + h) - f(x - h)) / 2.0 / h
 \end{lstlisting}
@@ -3782,8 +3795,8 @@ We can do the same with the second derivative:
   \frac{\textrm{d}^2f(x)}{\textrm{d}x^2} = \frac{f(x+h)-2f(x)-f(x-h)}{h^2} + O(h)
 \end{equation}
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/calculus.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/calculus.nim}}]
 proc DD*(f: proc(x: float): float, h = 1e-6): proc(x: float): float =
   result = proc(x: float): float =
     (f(x + h) - 2.0 * f(x) + f(x - h)) / (h * h)
@@ -4035,8 +4048,8 @@ T_k(x) = \frac1{k!}x^n = \frac{x}{k} \frac1{(k-1)!}x^{k-1} = \frac{x}{k} T_{k-1}
 
 For $x<0$, the terms in the sign have alternating sign and are decreasing in magnitude; therefore, for $x<0$, $R_k<T_{k+1}(1)$. This allows for an easy implementation of the Taylor expansion and its stopping condition:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/taylor.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/taylor.nim}}]
 proc myexp*(x: float, precision = 1e-6, maxSteps = 40): float =
   if x == 0:
     return 1.0
@@ -4084,8 +4097,8 @@ Also notice that the stopping condition is only true when $0\leq x<1$. Therefore
 
 Hence we write:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/taylor.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/taylor.nim}}]
 proc mysin*(x: float, precision = 1e-6, maxSteps = 40): float =
   if x == 0:
     return 0
@@ -4118,8 +4131,8 @@ for i in 0 ..< 10:
 
 Finally, we can do the same for the $\cos$ function:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/taylor.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/taylor.nim}}]
 proc mycos*(x: float, precision = 1e-6, maxSteps = 40): float =
   if x == 0:
     return 1.0
@@ -4293,8 +4306,8 @@ First, we define a class representing a matrix:
 
 \index{class!Matrix}
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/matrix.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/matrix.nim}}]
 type
   Matrix* = ref object
     nrows*, ncols*: int
@@ -4334,8 +4347,8 @@ The actual matrix elements are stored as a list or array into the {\ft data} mem
 Now we define a getter method, a setter method, and a string representation for the matrix elements:
 \index{\_\_getitem\_\_}\index{\_\_setitem\_\_}
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/matrix.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/matrix.nim}}]
 proc `[]`*(a: Matrix, i, j: int): float =
   ## `x = a[i, j]`
   a.data[i * a.ncols + j]
@@ -4369,8 +4382,8 @@ proc swapRows*(a: Matrix, i, j: int) =
 
 We also define some convenience functions for constructing the identity matrix (given its size) and a diagonal matrix (given the diagonal elements). We make these methods static because they do not act on an existing matrix.
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/matrix.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/matrix.nim}}]
 proc identity*(rows = 1, e = 1.0): Matrix =
   newMatrix(rows, rows,
     proc(r, c: int): float = (if r == c: e else: 0.0))
@@ -4384,8 +4397,8 @@ Now we are ready to define arithmetic operations among matrices. We start with a
 
 \index{matrix!addition}\index{matrix!subtraction}
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/matrix.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/matrix.nim}}]
 proc `+`*(a, b: Matrix): Matrix =
   ## Element-wise addition. Dimensions must match.
   if a.nrows != b.nrows or a.ncols != b.ncols:
@@ -4437,8 +4450,8 @@ For complex matrices we would parameterize {\ft Matrix} on a numeric type {\ft T
 \index{matrix!multiplication}\index{scalar product}
 Now we implement multiplication. We are interested in three types of multiplication: multiplication of a scalar by a matrix ({\ft \_\_rmul\_\_}), multiplication of a matrix by a matrix ({\ft \_\_mul\_\_}), and scalar product between two vectors (also handled by {\ft \_\_mul\_\_}):
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/matrix.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/matrix.nim}}]
 proc `*`*(x: float, a: Matrix): Matrix =
   ## Scalar times matrix.
   result = newMatrix(a.nrows, a.ncols)
@@ -4563,8 +4576,8 @@ $S_{n-1} \ldots S_1 S_0 B \equiv A^{-1}$.
 
 The Gauss-Jordan algorithm works exactly this way: given $A$, it computes $A^{-1}$:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/matrix.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/matrix.nim}}]
 proc inv*(a0: Matrix, x = 1.0): Matrix =
   ## Returns x * a^-1 using Gauss-Jordan elimination.
   let n = a0.ncols
@@ -4585,8 +4598,8 @@ proc inv*(a0: Matrix, x = 1.0): Matrix =
       if r == c: continue
       let pr = a[r, c]
       for k in 0 ..< n:
-        a[r, k] -= a[c, k] * pr
-        b[r, k] -= b[c, k] * pr
+        a[r, k] = a[r, k] - a[c, k] * pr
+        b[r, k] = b[r, k] - b[c, k] * pr
   result = b
 
 proc `/`*(x: float, a: Matrix): Matrix = inv(a, x)
@@ -4609,8 +4622,8 @@ echo A / 2.0    # @[@[0.5, 1.0], @[2.0, 4.5]]
 
 Another operation that we will need is transposition:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/matrix.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/matrix.nim}}]
 proc T*(a: Matrix): Matrix =
   ## Transpose of `a`.
   newMatrix(a.ncols, a.nrows,
@@ -4633,8 +4646,8 @@ Another typical transformation for matrices of complex numbers is the Hermitian 
 
 In later algorithms we will need to check whether a matrix is symmetrical (or almost symmetrical given precision) or zero (or almost zero):
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/matrix.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/matrix.nim}}]
 proc isAlmostSymmetric*(a: Matrix, ap = 1e-6, rp = 1e-4): bool =
   if a.nrows != a.ncols: return false
   for r in 0 ..< a.nrows:
@@ -4752,8 +4765,8 @@ The 2-norm is difficult to compute for a matrix, but the 1-norm provides an appr
 
 This allows us to define a generic function to compute the norm of lists, matrices/vectors, and scalars:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/linalg.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/linalg.nim}}]
 proc norm*(x: float, p = 1): float = abs(x)
 
 proc norm*(xs: seq[float], p = 1): float =
@@ -4780,8 +4793,8 @@ proc norm*(a: Matrix, p = 1): float =
 
 Now we can implement a function that computes the condition number for ordinary functions as well as for linear transformations represented by a matrix:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/linalg.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/linalg.nim}}]
 proc conditionNumber*(f: proc(x: float): float, x: float,
                       h = 1e-6): float =
   D(f, h)(x) * x / f(x)
@@ -4805,8 +4818,8 @@ echo formatFloat(conditionNumber(A), ffDecimal, 2)
 
 Having the norm for matrices also allows us to extend the definition of convergence of a Taylor series to a series of matrices:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/linalg.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/linalg.nim}}]
 proc exp*(a: Matrix, ap = 1e-6, rp = 1e-4, ns = 40): Matrix =
   ## Matrix exponential by Taylor series.
   var t = identity(a.ncols)
@@ -4835,8 +4848,8 @@ If a matrix is symmetric and positive definite, then there exists a lower triang
 
 The Cholesky algorithm takes a matrix $A$ as input and returns the matrix $L$:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/linalg.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/linalg.nim}}]
 proc cholesky*(a: Matrix): Matrix =
   ## Cholesky decomposition: returns lower-triangular `L`
   ## such that `L * L.T == a`.
@@ -4874,14 +4887,16 @@ The Cholesky algorithm fails if and only if the input matrix is not symmetric or
 
 Consider for example a generic covariance matrix $A$. It is supposed to be positive definite, but sometimes it is not, because it is computed incorrectly by taking different subsets of the data to compute $A_{ij}$, $A_{jk}$, and $A_{ik}$. The Cholesky algorithm provides an algorithm to check whether a matrix is positive definite:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/linalg.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/linalg.nim}}]
 proc isPositiveDefinite*(a: Matrix): bool =
   if not isAlmostSymmetric(a):
     return false
   try:
     discard cholesky(a)
     return true
+  except Defect:        # cholesky raises ArithmeticDefect on indefinites
+    return false
   except CatchableError:
     return false
 \end{lstlisting}
@@ -4907,8 +4922,8 @@ Therefore the $u_i$ components are Gaussian random variables.
 
 In summary, given a covariance matrix $A$, we can generate random vectors $x$ or random numbers with the same covariance simply by doing
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/finance.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/finance.nim}}]
 iterator randomList*(a: Matrix): seq[float] =
   ## Yields successive random vectors with covariance matrix `a`.
   let l = cholesky(a)
@@ -4969,8 +4984,8 @@ The inputs of the formula are the covariance matrix ($A$), a vector or arithmeti
 
 Here is the algorithm:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/finance.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/finance.nim}}]
 proc markowitz*(mu, a: Matrix, rFree: float):
                 (seq[float], float, float) =
   ## Markowitz tangency portfolio. Returns (weights, return, risk).
@@ -5097,8 +5112,8 @@ Its solution is
 
 The following algorithm implements a fitting function based on the preceding procedure. It takes as input a list of functions $f_i$ and a list of points $p_j=(t_j, o_j, do_j)$ and returns three objects---a list with the $c$ coefficients, the value of $\chi^2$ for the best fit, and the fitting function:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/fitting.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/fitting.nim}}]
 type
   FitFunc* = proc(x: float): float
 
@@ -5128,9 +5143,13 @@ proc fitLeastSquares*(points: seq[(float, float, float)],
 
 # examples of fitting functions
 proc polynomial*(n: int): seq[FitFunc] =
+  proc monomial(power: int): FitFunc =
+    # Wrap closure creation in a separate proc so each closure
+    # captures its own `power` parameter (rather than sharing a
+    # single mutable loop variable).
+    result = proc(x: float): float = x ^ power
   for p in 0 .. n:
-    let pp = p
-    result.add proc(x: float): float = x ^ pp
+    result.add monomial(p)
 
 let CONSTANT*  = polynomial(0)
 let LINEAR*    = polynomial(1)
@@ -5195,8 +5214,8 @@ In finance, {\it technical analysis} is an empirical discipline that consists of
 
 \index{class!Trader}
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/finance.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/finance.nim}}]
 type
   Trader* = ref object
 
@@ -5235,8 +5254,8 @@ proc simulate*(t: Trader, data: seq[float],
 
 Now we back test the strategy using fake financial data. We can generate fake financial data with this function:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/finance.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/finance.nim}}]
 proc fakeStockPrices*(startPrice = 100.0, averageReturn = 0.05,
                      volatility = 0.30, days = 100): seq[float] =
   let dailyVolatility = volatility / sqrt(250.0)
@@ -5326,8 +5345,8 @@ $U$ is a matrix whose column $i$ is the $\mathbf{x}_i$ eigenvalue.
 The following algorithm is called the Jacobi algorithm. It takes as input a symmetric matrix $A$ and returns the matrix $U$ and a list of corresponding eigenvalues $e$, sorted from smallest to largest:
 
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/linalg.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/linalg.nim}}]
 proc jacobiEigenvalues*(a: Matrix): (Matrix, seq[float]) =
   ## Returns (U, e) so that `a == U * diagonal(e) * U.T`.
   ## The i-th column of U is the eigenvector for eigenvalue `e[i]`.
@@ -5442,8 +5461,8 @@ First, we compute the correlation matrix for all the stocks. This is a nontrivia
 
 %%%% FIXME EXAMPLE?
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/linalg.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/linalg.nim}}]
 proc computeCorrelationMatrix*(v: seq[seq[float]]): Matrix =
   ## Pearson correlation matrix of `v` (rows are series).
   let m = v.len
@@ -5531,8 +5550,8 @@ If a solution to the original problem exists, ignoring precision issues, the min
 
 Notice that in the following code, $x$ and $y$ are exchanged because we adopt the convention that $y$ is the output and $x$ is the input:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/linalg.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/linalg.nim}}]
 proc invertMinimumResidual*(f: proc(x: Matrix): Matrix,
                             x: Matrix,
                             ap = 1e-4, rp = 1e-4, ns = 200): Matrix =
@@ -5555,8 +5574,8 @@ proc invertMinimumResidual*(f: proc(x: Matrix): Matrix,
 
 The stabilized biconjugate gradient~\cite{bicgstab} method is also based on constructing a Krylov subspace and minimizing the same residue as in the minimum residual algorithm, yet it is faster than the minimum residual and has a smoother convergence than other conjugate gradient methods:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/linalg.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/linalg.nim}}]
 proc invertBicgstab*(f: proc(x: Matrix): Matrix,
                      x: Matrix,
                      ap = 1e-4, rp = 1e-4, ns = 200): Matrix =
@@ -5702,8 +5721,8 @@ The $x_i$ series will get closer and closer to the solution $x$.
 
 Here is the process implemented into an algorithm:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/solvers.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/solvers.nim}}]
 proc solveFixedPoint*(f: proc(x: float): float, x0: float,
                       ap = 1e-6, rp = 1e-4, ns = 100): float =
   let g = proc(x: float): float = f(x) + x
@@ -5733,8 +5752,8 @@ echo formatFloat(solveFixedPoint(f, 1.0, rp = 0.0), ffDecimal, 4)
 
 The goal of the bisection~\cite{bisection} method is to solve $f(x)=0$ when the function is continuous and it is known to change sign in between $x=a$ and $x=b$. The bisection method is the continuous equivalent of the binary search algorithm seen in chapter 3. The algorithm iteratively finds the middle point of the domain $x=(b+a)/2$, evaluates the function there, and decides whether the solution is on the left or the right, thus reducing the size of the domain from $(a, b)$ to $(a, x)$ or $(x, b)$, respectively:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/solvers.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/solvers.nim}}]
 proc solveBisection*(f: proc(x: float): float, a0, b0: float,
                      ap = 1e-6, rp = 1e-4, ns = 100): float =
   var a = a0
@@ -5780,8 +5799,8 @@ f(x) = 0 \rightarrow x = x_0 - \frac{f(x_0)}{f'(x_0)}
 \end{equation}
 thus finding a new and better estimate for the solution. The algorithm iterates the preceding equation, and when it converges, it approximates the exact solution better and better:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/solvers.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/solvers.nim}}]
 proc solveNewton*(f: proc(x: float): float, x0: float,
                   ap = 1e-6, rp = 1e-4, ns = 20): float =
   var x = x0
@@ -5818,8 +5837,8 @@ x_{i+i} &=& x_i - \frac{f(x_i)}{f'(x_i)}
 \end{eqnarray}
 As the algorithm approaches the exact solution, the numerical derivative becomes a better and better approximation for the derivative:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/solvers.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/solvers.nim}}]
 proc solveSecant*(f: proc(x: float): float, x0: float,
                   ap = 1e-6, rp = 1e-4, ns = 20): float =
   var x = x0
@@ -5858,8 +5877,8 @@ For this reason, if the function is differentiable twice, we can simply rename a
 
 \index{bisection method}
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/solvers.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/solvers.nim}}]
 proc optimizeBisection*(f: proc(x: float): float, a, b: float,
                         ap = 1e-6, rp = 1e-4, ns = 100): float =
   solveBisection(D(f), a, b, ap, rp, ns)
@@ -5877,8 +5896,8 @@ echo formatFloat(optimizeBisection(f, 2.0, 5.0), ffDecimal, 4)
 
 \index{Newton optimization}
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/solvers.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/solvers.nim}}]
 proc optimizeNewton*(f: proc(x: float): float, x0: float,
                      ap = 1e-6, rp = 1e-4, ns = 20): float =
   var x = x0
@@ -5908,8 +5927,8 @@ echo formatFloat(optimizeNewton(f, 3.0), ffDecimal, 3)
 
 As in the Newton case, the secant method can also be used to find extrema, by replacing $f$ with $f'$:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/solvers.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/solvers.nim}}]
 proc optimizeSecant*(f: proc(x: float): float, x0: float,
                      ap = 1e-6, rp = 1e-4, ns = 100): float =
   var x = x0
@@ -5942,8 +5961,8 @@ echo formatFloat(optimizeSecant(f, 3.0), ffDecimal, 3)
 
 If the function we want to optimize is continuous but not differentiable, then the previous algorithms do not work. In this case, there is one algorithm that comes to our rescue, the golden section~\cite{golden} search. It is similar to the bisection method, with one caveat; in the bisection method, at each point, we need to know if a function changes sign in between two points, therefore two points are all we need. If instead we are looking for a max or min, we need to know if the function is concave or convex in between those two points. This requires one extra point in between the two. So while the bisection method only needs one point in between $[a, b]$, the golden search needs two points, $x_1$ and $x_2$, in between $[a, b]$, and from them it can determine whether the extreme is in $[a, x_2]$ or in $[x_1, b]$. This is also represented pictorially in fig.~\ref{golden-pic}. The two points are chosen in an optimal way so that at the next iteration, one of the two points can be recycled by leaving the ratio between $x_1-a$ and $b-x_2$ fixed and equal to 1:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/solvers.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/solvers.nim}}]
 proc optimizeGoldenSearch*(f: proc(x: float): float, a0, b0: float,
                            ap = 1e-6, rp = 1e-4, ns = 100): float =
   var a = a0
@@ -5989,8 +6008,8 @@ where $\mathbf{h}_i$ is a vector with components all equal to zero but $h_i = h 
 
 We can implement it as follows:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/calculus.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/calculus.nim}}]
 proc partial*(f: proc(x: seq[float]): float, i: int, h = 1e-4):
               proc(x: seq[float]): float =
   result = proc(x: seq[float]): float =
@@ -6086,8 +6105,8 @@ $\partial^2 f(x)/\partial x_2\partial x_2$ &
 
 Given the definition of partial, we can compute the gradient and the Hessian using the two functions
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/calculus.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/calculus.nim}}]
 proc gradient*(f: proc(x: seq[float]): float,
                x: seq[float], h = 1e-4): Matrix =
   newMatrix(x.len, 1,
@@ -6167,8 +6186,8 @@ $\partial f_2(x)/\partial x_2$ &
 
 which we can implement as follows:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/calculus.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/calculus.nim}}]
 proc jacobian*(f: proc(x: seq[float]): seq[float],
                x: seq[float], h = 1e-4): Matrix =
   var partials: seq[seq[float]] = @[]
@@ -6193,8 +6212,8 @@ echo jacobian(f, @[1.0, 1.0, 1.0])
 
 We can now solve eq.~\ref{jacobian2} iteratively as we did for the one-dimensional Newton solver with only one change---the first derivative of $f$ is replaced by the Jacobian:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/solvers.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/solvers.nim}}]
 proc solveNewtonMulti*(f: proc(x: seq[float]): seq[float],
                        x0: seq[float],
                        ap = 1e-6, rp = 1e-4, ns = 20): seq[float] =
@@ -6236,8 +6255,8 @@ set its derivative to zero, and solve it, thus obtaining
 \end{equation}
 which constitutes the core of the multidimensional Newton optimizer:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/solvers.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/solvers.nim}}]
 proc optimizeNewtonMulti*(f: proc(x: seq[float]): float,
                           x0: seq[float],
                           ap = 1e-6, rp = 1e-4, ns = 20): seq[float] =
@@ -6265,8 +6284,8 @@ echo optimizeNewtonMulti(f, @[0.0, 0.0])
 
 We can further improve the Newton multidimensional optimizer by using the following technique. At each step, if the next guess does not reduce the value of $f$, we revert to the previous point, and we perform a one-dimensional Newton optimization along the direction of the gradient. This method greatly increases the stability of the multidimensional Newton optimizer:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/solvers.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/solvers.nim}}]
 proc optimizeNewtonMultiImproved*(
     f: proc(x: seq[float]): float, x0: seq[float],
     ap = 1e-6, rp = 1e-4, ns = 20, hStart = 10.0): seq[float] =
@@ -6376,8 +6395,8 @@ Therefore we have reduced the original problem to a simple problem by reducing t
 
 The following code takes as input the {\ft data} as a list of $(x_i, y_i, \delta y_i)$, a list of functions (or a single function), and a guess for the $\mathbf{b}$ values. If the {\ft fs} argument is not a list but a single function, then there is no $\mathbf{a}$ to compute, and the function proceeds by minimizing the $\chi^2$ using the improved Newton optimizer (the one-dimensional or the improved multidimensional one, as appropriate). If the argument $\mathbf{b}$ is missing, then the fitting parameters are all linear, and the algorithm reverts to regular linear least squares. Otherwise, run the more complex algorithm described earlier:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/fitting.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/fitting.nim}}]
 type
   NonlinearFit* = proc(b: seq[float], x: float): float
 
@@ -6473,8 +6492,8 @@ If a function is discontinuous only in a finite number of points in the domain $
 
 We can implement the naive integration as a function of $N$ as follows:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/integration.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/integration.nim}}]
 proc integrateNaive*(f: proc(x: float): float,
                      a, b: float, n = 20): float =
   ## Trapezoidal-rule integration of `f` over `[a, b]` with `n` slices.
@@ -6486,8 +6505,8 @@ proc integrateNaive*(f: proc(x: float): float,
 
 And here we implement the limit by doubling the number of points until convergence is achieved:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/integration.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/integration.nim}}]
 proc integrate*(f: proc(x: float): float, a, b: float,
                 ap = 1e-4, rp = 1e-4, ns = 20): float =
   ## Iteratively-refined trapezoidal integration.
@@ -6527,8 +6546,8 @@ where $c_i$ are coefficients to be determined:
 
 \index{class!QuadratureIntegrator}
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/integration.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/integration.nim}}]
 type
   QuadratureIntegrator* = ref object
     w*: Matrix
@@ -7046,8 +7065,8 @@ We call $E[(X-\mu _X)^2]$ the {\it variance} of $X$ and denote it with $\sigma _
 For discrete random variables, we can implement these definitions as follows:
 \index{mean}\index{variance}\index{standard deviation}
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/stats.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/stats.nim}}]
 proc E*(f: proc(x: float): float, S: seq[float]): float =
   if S.len == 0: return 0.0
   for x in S: result += f(x)
@@ -7166,8 +7185,8 @@ where $x_i$ are $N$ random points drawn from the uniform distribution $p$ define
 
 We can verify the preceding relation numerically for a special case:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/montecarlo.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/montecarlo.nim}}]
 proc integrateMc*(f: proc(x: float): float, a, b: float,
                   N = 1000): float =
   for _ in 0 ..< N: result += f(rand(b - a) + a)
@@ -7227,8 +7246,8 @@ E[(\sum_iX_i)^2] &=&\sum_iE[X_i^2]
 
 
 We can define covariance and correlation for discrete distributions:
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/stats.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/stats.nim}}]
 proc covariance*(X, Y: seq[float]): float =
   for i in 0 ..< X.len: result += X[i] * Y[i]
   result = result / float(X.len) - mean(X) * mean(Y)
@@ -7683,8 +7702,8 @@ The RANDU generator is particularly fast because the modulus can
 be implemented using the finite 32-bit precision.
 
 Here is a possible implementation for $c=0$:
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/randomgen.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/randomgen.nim}}]
 type
   MCG* = ref object
     x*, a*, m*: int
@@ -7921,8 +7940,8 @@ pure-Nim implementation of the Marsenne twister:
 
 \index{class!MarsenneTwister}
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/randomgen.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/randomgen.nim}}]
 type
   MarsenneTwister* = ref object
     w*: array[625, uint32]
@@ -8051,10 +8070,15 @@ generators.
 
 Here is an example of a usage of {\ft leapfrog}:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/randomgen.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/randomgen.nim}}]
 proc leapfrog*(mcg: MCG, k: int): seq[MCG] =
-  let a = (mcg.a ^ k) mod mcg.m
+  # Compute (mcg.a^k) mod mcg.m incrementally to avoid integer
+  # overflow: for typical seeds, mcg.a^k overflows int64 long before
+  # `k` reaches a useful number of streams.
+  var a = 1
+  for _ in 0 ..< k:
+    a = (a * mcg.a) mod mcg.m
   for i in 0 ..< k:
     result.add newMCG(mcg.next(), a, mcg.m)
 \end{lstlisting}
@@ -8115,8 +8139,8 @@ Here we consider the discrete case as we implement it into a {\ft randint} metho
 
 \index{class!RandomSource}
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/randomgen.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/randomgen.nim}}]
 type
   RandomSource* = ref object
     generator*: proc(): float    # any uniform `[0, 1)` source
@@ -8135,8 +8159,8 @@ Notice that the random {\ft RandomSource} constructor expects a generator such a
 
 We can use {\ft randint} to generate a random choice from a finite set when each option has the same probability:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/randomgen.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/randomgen.nim}}]
 proc choice*[T](r: RandomSource, S: openArray[T]): T =
   S[r.randint(0, S.len - 1)]
 \end{lstlisting}
@@ -8160,8 +8184,8 @@ A Bernoulli random variable has an expected value of $p$ and variance of $pq$.
 
 We implement it by adding a corresponding method to the {\ft RandomSource} class:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/randomgen.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/randomgen.nim}}]
 proc bernoulli*(r: RandomSource, p: float): int =
   if r.random() < p: 1 else: 0
 \end{lstlisting}
@@ -8170,8 +8194,8 @@ proc bernoulli*(r: RandomSource, p: float): int =
 
 A generalization of the Bernoulli distribution is a distribution in which we have a finite set of choices, each with an associated probability. The table can be a list of tuples {\ft (value, probability)} or a dictionary of {\ft value:probability}:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/randomgen.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/randomgen.nim}}]
 proc lookup*[K](r: RandomSource, table: seq[(K, float)],
                 epsilon = 1e-6): K =
   var u = r.random()
@@ -8401,8 +8425,8 @@ table lookup algorithm, one may just notice that the current recursive relation 
 
 This allows for a very efficient implementation:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/randomgen.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/randomgen.nim}}]
 proc binomial*(r: RandomSource, n: int, p: float,
                epsilon = 1e-6): int =
   var u = r.random()
@@ -8472,8 +8496,8 @@ negative binomial distribution:
 
 This allows for a very efficient implementation:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/randomgen.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/randomgen.nim}}]
 proc negativeBinomial*(r: RandomSource, k: int, p: float,
                        epsilon = 1e-6): int =
   var u = r.random()
@@ -8568,8 +8592,8 @@ binomial distribution and observe that for Poisson,
 \end{eqnarray}
 therefore the preceding algorithm can be modified into
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/randomgen.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/randomgen.nim}}]
 proc poisson*(r: RandomSource, lamb: float, epsilon = 1e-6): int =
   var u = r.random()
   var q = exp(-lamb)
@@ -8599,8 +8623,8 @@ into integers by using the formula
 h_i=a+\left\lfloor (b-a+1)y_i\right\rfloor
 \end{equation}
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/randomgen.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/randomgen.nim}}]
 proc uniform*(r: RandomSource, a, b: float): float =
   a + (b - a) * r.random()
 \end{lstlisting}
@@ -8673,8 +8697,8 @@ x=-\frac 1\lambda \log u
 
 We implement as follows:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/randomgen.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/randomgen.nim}}]
 proc exponential*(r: RandomSource, lamb: float): float =
   -ln(r.random()) / lamb
 \end{lstlisting}
@@ -8716,8 +8740,8 @@ There is no way to map a uniform random number into a Gaussian number but there 
 \item  $y_1=v_1\sqrt{(-2/s)\log s}$ and $y_2=v_2\sqrt{(-2/s)\log s}$
 \end{itemize}
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/randomgen.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/randomgen.nim}}]
 type
   GaussRandomSource* = ref object
     base*: RandomSource
@@ -8775,8 +8799,8 @@ The following algorithm generates a table of $a$ versus $c$ given $\mu$ and $\si
 
 \index{confidence intervals}
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/randomgen.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/randomgen.nim}}]
 const CONFIDENCE* = [
   (0.68,    1.0),
   (0.80,    1.281551565545),
@@ -8814,8 +8838,8 @@ F(x) \equiv  \textrm{Prob}(X<x) = 1 - \left(\frac{x_m}{x}\right)^{\alpha}
 
 It can be implemented as follows using the inversion method:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/randomgen.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/randomgen.nim}}]
 proc pareto*(r: RandomSource, alpha, xm: float): float =
   let u = r.random()
   xm * pow(1.0 - u, -1.0 / alpha)
@@ -8834,8 +8858,8 @@ x &=&\cos (2\pi u) \\
 y &=&\sin (2\pi u)
 \end{eqnarray}
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/randomgen.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/randomgen.nim}}]
 proc pointOnCircle*(r: RandomSource, radius = 1.0): (float, float) =
   let angle = 2.0 * PI * r.random()
   (radius * cos(angle), radius * sin(angle))
@@ -8843,8 +8867,8 @@ proc pointOnCircle*(r: RandomSource, radius = 1.0): (float, float) =
 
 We can generate a random point uniformly distributed inside a circle by generating, independently, the $x$ and $y$ coordinates of points inside a square and rejecting those outside the circle:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/randomgen.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/randomgen.nim}}]
 proc pointInCircle*(r: RandomSource, radius = 1.0): (float, float) =
   while true:
     let x = r.uniform(-radius, radius)
@@ -8866,8 +8890,8 @@ z &=&v_3/\sqrt{v_1^2+v_2^2+v_3^2}
 \end{eqnarray}
 else start again.
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/randomgen.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/randomgen.nim}}]
 proc pointInSphere*(r: RandomSource, radius = 1.0):
                    (float, float, float) =
   while true:
@@ -8901,8 +8925,8 @@ echo sample(S)
 
 We can therefore generate a sample of random events by repeating this procedure. This is called {\it resampling}~\cite{resampling}:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/randomgen.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/randomgen.nim}}]
 proc resample*[T](S: openArray[T], size = -1): seq[T] =
   let n = if size < 0: S.len else: size
   for _ in 0 ..< n: result.add sample(S)
@@ -9272,8 +9296,8 @@ The second step of the bootstrap methodology consists of sorting the $\mu_k$ and
 
 Here is the complete algorithm:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/montecarlo.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/montecarlo.nim}}]
 proc bootstrap*(x: seq[float], confidence = 0.68, nsamples = 100):
                 (float, float, float) =
   ## Bootstrap confidence interval. Returns (lower, mean, upper).
@@ -9305,8 +9329,8 @@ We can now combine everything we have seen so far into a generic program that ca
 
 \index{class!MCEngine}
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/montecarlo.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/montecarlo.nim}}]
 type
   MCEngine* = ref object of RootObj
     results*: seq[float]
@@ -9344,8 +9368,8 @@ The preceding class has two methods:
 
 It is also useful to have a function, which we call {\bf var} (aka {\it value at risk}~\cite{wilmott}), which computes a numerical value so that the output of a given percentage of the simulations falls below that value:
 
-%%% META:FILE:nlib.nim
-\begin{lstlisting}[caption={in file: {\ft nlib.nim}}]
+%%% META:FILE:nlib/montecarlo.nim
+\begin{lstlisting}[caption={in file: {\ft nlib/montecarlo.nim}}]
 proc valueAtRisk*(e: MCEngine, confidence = 95): float =
   let index = int(0.01 * float(e.results.len) * float(confidence) + 0.999)
   if e.results.len - index < 5:

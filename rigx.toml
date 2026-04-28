@@ -14,6 +14,8 @@ export TEXMFVAR=$TMPDIR/texmf-var
 export TEXMFCONFIG=$TMPDIR/texmf-config
 export TEXMFHOME=$TMPDIR/texmf-home
 
+cd book
+
 # Multi-pass: undefined cites/refs resolve only after .aux is written, so
 # the first pass is expected to emit errors. Tolerate non-zero exits and
 # rely on the final-pass PDF check to decide success.
@@ -28,4 +30,12 @@ test -s book_numerical.pdf
 install_script = """
 mkdir -p $out
 cp book_numerical.pdf $out/
+"""
+
+[targets.nlib_test]
+kind         = "test"
+sandbox      = false
+deps.nixpkgs = ["nim"]
+script       = """
+nim r --path:src tests/all.nim
 """
