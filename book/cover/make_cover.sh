@@ -128,8 +128,7 @@ cat > wrap.svg <<SVG
     <text x="${BIO_X}" y="$((SAFE+342))">simulation, web technologies, and financial systems. He has held</text>
     <text x="${BIO_X}" y="$((SAFE+398))">academic and industry leadership roles, including serving as a tenured</text>
     <text x="${BIO_X}" y="$((SAFE+454))">Professor of Computer Science at DePaul University and leading</text>
-    <text x="${BIO_X}" y="$((SAFE+510))">simulation infrastructure at SpaceX, where he worked on high-fidelity</text>
-    <text x="${BIO_X}" y="$((SAFE+566))">systems used across the Falcon, Dragon, Starship, and Starlink programs.</text>
+    <text x="${BIO_X}" y="$((SAFE+510))">the simulation applications team at SpaceX.</text>
   </g>
   <text x="$((BLEED_PX + SAFE))" y="$((FULL_H-SAFE-70))" font-size="44" fill="${YEL}" letter-spacing="2">EXPERTS4SOLUTIONS</text>
 </svg>
