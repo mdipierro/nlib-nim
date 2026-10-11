@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rigx --help)",
+      "Bash(rigx new *)",
+      "Bash(rigx build *)",
+      "Bash(rigx list *)",
+      "Read(//home/mdipierro/.local/share/**)",
+      "Read(//home/mdipierro/.config/**)",
+      "Read(//home/mdipierro/Dropbox/book-numerical/**)",
+      "Bash(nix-store -l /nix/store/b1fqfi18n3kn8cjgbr2g7svfxfikm4pa-pdf-0.1.0.drv)",
+      "Bash(awk 'NR>=265 && NR<=2180 && /^.{0,50}\\(chapter|subsection|section|Python\\)/' /home/mdipierro/Dropbox/book-numerical/nim/book_numerical.tex)",
+      "Bash(awk 'NR>=2177 && NR<=4772' /home/mdipierro/Dropbox/book-numerical/nim/book_numerical.tex)",
+      "Bash(awk 'NR>=2177 && NR<=4772 && /META:FILE/' /home/mdipierro/Dropbox/book-numerical/nim/book_numerical.tex)",
+      "Bash(awk 'NR>=2900 && NR<=4772' /home/mdipierro/Dropbox/book-numerical/nim/book_numerical.tex)",
+      "Bash(awk 'NR>=2177 && NR<=4772 && /^def |^class /' /home/mdipierro/Dropbox/book-numerical/nim/book_numerical.tex)",
+      "Bash(awk 'NR>=3800 && NR<=4772 && /^def |^class |begin{lstlisting}/' /home/mdipierro/Dropbox/book-numerical/nim/book_numerical.tex)",
+      "Bash(awk 'NR>=4857 && NR<=8210 && /^def |^class /' /home/mdipierro/Dropbox/book-numerical/nim/book_numerical.tex)",
+      "Bash(awk 'NR>=4857 && NR<=8210 && /nlib\\\\.py|test\\\\.py/' /home/mdipierro/Dropbox/book-numerical/nim/book_numerical.tex)",
+      "Bash(awk 'NR>=4857 && NR<=8210' /home/mdipierro/Dropbox/book-numerical/nim/book_numerical.tex)",
+      "Bash(awk *)",
+      "Bash(nim r *)",
+      "Bash(rigx test *)",
+      "Bash(cat)",
+      "Bash(python3 /tmp/recaption_meta.py)",
+      "Bash(grep -c \"META:FILE:nlib\\\\.nim$\" /home/mdipierro/Dropbox/book-numerical/nim/book/book_numerical.tex)",
+      "Bash(grep -n \"proc \\\\`\" /home/mdipierro/Dropbox/book-numerical/nim/src/nlib/matrix.nim)"
+    ]
+  }
+}
